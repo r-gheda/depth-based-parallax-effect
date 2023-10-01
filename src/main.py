@@ -8,11 +8,13 @@ SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
 img = None
 drawing = False
 pt1_x , pt1_y = None , None
+depth_annotation_windowd = None
+canvas = None
 
 def select_image():
+    global SEL_IMAGE, img
     res = False
     while not res:
-        global SEL_IMAGE
         SEL_IMAGE = fd.askopenfilename()
         try:
             img = Image.open(SEL_IMAGE)
@@ -21,34 +23,46 @@ def select_image():
             continue
         if not img.format in SUPPORTED_FORMATS:
             print("Unsupported format")
-            print(SEL_IMAGE.format)
+            print(img.format)
         else:
-            res = True
-    
+            res = True    
+
+def _from_rgb(rgb):
+    """translates an rgb tuple of int to a tkinter friendly color code
+    """
+    return "#%02x%02x%02x" % rgb   
+
+def get_x_and_y(event):
+    global lasx, lasy, color
+    lasx, lasy = event.x, event.y
+    color = _from_rgb((depth_slider.get(), depth_slider.get(), depth_slider.get()))
+
+def draw_handler(event):
+    #print('hello')
+    global lasx, lasy
+    canvas.create_line((lasx, lasy, event.x, event.y), 
+                        fill=color, 
+                        width=3)
+    lasx, lasy = event.x, event.y
+
 def run():
-    img = cv2.imread("image.jpg")
-    cv2.namedWindow('test draw')
-    cv2.setMouseCallback('test draw',line_drawing)
+    global depth_annotation_windowd, canvas, depth_slider
+    depth_annotation_windowd = tk.Tk()
+    depth_annotation_windowd.title("Draw")
+    
+    canvas = tk.Canvas(depth_annotation_windowd, width=600, height=300)
+    canvas.pack()
+    tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_windowd)
+    canvas.create_image(300, 150, image=tk_img)
 
-    while(1):
-        cv2.imshow('test draw',img)
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-    cv2.destroyAllWindows()
+    canvas.bind("<Button-1>", get_x_and_y)
+    canvas.bind('<B1-Motion>', draw_handler)
 
-def line_drawing(event,x,y,flags,param):
-    global pt1_x,pt1_y,drawing
-    if event==cv2.EVENT_LBUTTONDOWN:
-        drawing=True
-        pt1_x,pt1_y=x,y
+    depth_slider = tk.Scale(depth_annotation_windowd, from_=0, to=255, orient=tk.HORIZONTAL, label="Depth")
+    depth_slider.set(0)
+    depth_slider.pack()
 
-    elif event==cv2.EVENT_MOUSEMOVE:
-        if drawing==True:
-            cv2.line(img,(pt1_x,pt1_y),(x,y),color=(255,0,0),thickness=3)
-            pt1_x,pt1_y=x,y
-    elif event==cv2.EVENT_LBUTTONUP:
-        drawing=False
-        cv2.line(img,(pt1_x,pt1_y),(x,y),color=(255,0,0),thickness=3)        
+    depth_annotation_windowd.mainloop()
 
 window = tk.Tk()
 
