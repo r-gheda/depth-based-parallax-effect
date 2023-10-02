@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog as fd
 from PIL import ImageTk, Image
-import cv2
+from poisson import solve_poisson, anisotropic_solver
 
 SEL_IMAGE = None
 SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
@@ -10,6 +10,8 @@ drawing = False
 pt1_x , pt1_y = None , None
 depth_annotation_windowd = None
 canvas = None
+out = None
+scribbles = {}
 
 def select_image():
     global SEL_IMAGE, img
@@ -38,11 +40,11 @@ def get_x_and_y(event):
     color = _from_rgb((depth_slider.get(), depth_slider.get(), depth_slider.get()))
 
 def draw_handler(event):
-    #print('hello')
     global lasx, lasy
     canvas.create_line((lasx, lasy, event.x, event.y), 
                         fill=color, 
                         width=3)
+    scribbles[(lasx, lasy)] = depth_slider.get()
     lasx, lasy = event.x, event.y
 
 def run():
@@ -50,10 +52,10 @@ def run():
     depth_annotation_windowd = tk.Tk()
     depth_annotation_windowd.title("Draw")
     
-    canvas = tk.Canvas(depth_annotation_windowd, width=600, height=300)
+    canvas = tk.Canvas(depth_annotation_windowd, width=img.width, height=img.height)
     canvas.pack()
     tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_windowd)
-    canvas.create_image(300, 150, image=tk_img)
+    canvas.create_image(img.width/2, img.height/2, image=tk_img)
 
     canvas.bind("<Button-1>", get_x_and_y)
     canvas.bind('<B1-Motion>', draw_handler)
@@ -63,6 +65,16 @@ def run():
     depth_slider.pack()
 
     depth_annotation_windowd.mainloop()
+
+def run_poisson():
+    global img, scribbles
+    img = img.convert('L')
+    solve_poisson(img, scribbles)
+
+def run_anisotropic():
+    global img, scribbles
+    img = img.convert('L')
+    anisotropic_solver(img, scribbles)
 
 window = tk.Tk()
 
@@ -80,14 +92,34 @@ image_button = tk.Button(
 )
 image_button.pack()
 
-start_button = tk.Button(
-    text="Start",
+draw_button = tk.Button(
+    text="Draw",
     width=25,
     height=5,
     bg="green",
     fg="yellow",
     command= run
 )
-start_button.pack()
+draw_button.pack()
+
+poisson_button = tk.Button(
+    text="Poisson",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_poisson
+)
+poisson_button.pack()
+
+anisotropic_button = tk.Button(
+    text="Anisotropic",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_anisotropic
+)
+anisotropic_button.pack()
 
 window.mainloop()
