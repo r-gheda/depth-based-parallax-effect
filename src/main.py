@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog as fd
 from PIL import ImageTk, Image
-from poisson import solve_poisson, anisotropic_solver
 import os
 import subprocess
 
@@ -92,7 +91,7 @@ def run_poisson():
     save_scribbles()
     print(iterations)
 
-    arglist = ["../build/a1_hdr", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/poisson_out.png", "../outputs/scribbles", "poisson", iterations, beta]
+    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/poisson_out.png", "../outputs/scribbles", "poisson", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
@@ -113,7 +112,7 @@ def run_anisotropic():
 
     save_scribbles()
 
-    arglist = ["../build/a1_hdr", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/anisotropic_out.png", "../outputs/scribbles", "anisotropic", iterations, beta]
+    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/anisotropic_out.png", "../outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
