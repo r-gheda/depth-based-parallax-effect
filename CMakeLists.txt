@@ -25,9 +25,11 @@ enable_sanitizers(${MAIN_EXE_NAME})
 set_project_warnings(${MAIN_EXE_NAME})
 
 # OpenMP support.
-find_package(OpenMP)
+find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND) 
     target_link_libraries(${MAIN_EXE_NAME} PRIVATE OpenMP::OpenMP_CXX)
+else()
+	message( SEND_ERROR "OpenMP not found" )
 endif()
 
 

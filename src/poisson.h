@@ -12,6 +12,8 @@
 #include <iostream>
 #include <math.h>
 #include <cstdlib>
+#include "omp.h"
+#include <chrono>
 
 const float BETA = 20.0;
 const int NUM_ITERS = 4000;
@@ -42,13 +44,14 @@ float pixel_coeff(int x_1, int y_1, int x_2, int y_2, const ImageFloat& img, flo
 
 ImageFloat solvePoisson(const ImageFloat& input_image, std::map<int, float>  scribbles, std::vector<std::vector<bool>> lookup, const int num_iters = NUM_ITERS)
 {
+    auto start = std::chrono::steady_clock::now();
     // Empty solution.
     auto I = ImageFloat(input_image.width, input_image.height);
-    // std::fill(I.data.begin(), I.data.end(), 0.0f);
     
     // Another solution for the alteranting updates.
     auto I_next = ImageFloat(input_image.width, input_image.height);
     
+    #pragma omp parallel for shared(I, I_next)
     for (int i = 0;i < I.width * I.height;++i)
     {
         I.data[i] = input_image.data[i];
@@ -68,10 +71,10 @@ ImageFloat solvePoisson(const ImageFloat& input_image, std::map<int, float>  scr
         int Y = input_image.height;
         
         std::vector<std::vector<int>> new_lookups;
-        #pragma parallel for shared(I, I_next)
+        #pragma omp parallel for shared(I, I_next)
         for (int x = 0;x < X; ++x)
         {
-            #pragma parallel for shared(I, I_next)
+            #pragma omp parallel for shared(I, I_next)
             for (int y = 0;y < Y; ++y)
             {
                 if (lookup[x][y]) {
@@ -143,7 +146,6 @@ ImageFloat solvePoisson(const ImageFloat& input_image, std::map<int, float>  scr
         std::swap(I, I_next);
     }
 
-    // After the last "swap", I is the latest solution.
     return I;
 }
 
@@ -156,16 +158,15 @@ ImageFloat solveAnisotropic(const ImageFloat& input_image, const ImageRGB& input
     // Another solution for the alteranting updates.
     auto I_next = ImageFloat(input_image.width, input_image.height);
     
+    #pragma omp parallel for shared(I, I_next)
     for (int i = 0;i < I.width * I.height;++i)
     {
         I.data[i] = input_image.data[i];
         I_next.data[i] = input_image.data[i];
         
         if (lookup[i % I.width][i / I.width]) {
-            I.data[i] = scribbles[i] ; // / 255.0f;
-            I_next.data[i] = scribbles[i] ; // / 255.0f;
-            // std::cout << i << " " << I.data[i] << std::endl;
-            // std::cout << i << " " << scribbles[i] << std::endl;
+            I.data[i] = scribbles[i] ;
+            I_next.data[i] = scribbles[i] ;
         }
     }
 
@@ -179,14 +180,13 @@ ImageFloat solveAnisotropic(const ImageFloat& input_image, const ImageRGB& input
 
         std::vector<std::vector<int>> new_lookups;
         
-        #pragma parallel for shared(I, I_next)
+        #pragma omp parallel for shared(I, I_next)
         for (int x = 0;x < X; ++x)
         {
-            #pragma parallel for shared(I, I_next)
+            #pragma omp parallel for shared(I, I_next)
             for (int y = 0;y < Y; ++y)
             {
                 if (lookup[x][y]) {
-                    // I_next.data[getImageOffset(I_next, x, y)] = scribbles[getImageOffset(input_image, x, y)];
                     continue;
                 }
                 float prv_x = 0;
@@ -249,10 +249,10 @@ ImageFloat solveAnisotropic(const ImageFloat& input_image, const ImageRGB& input
                 }
 
                 I_next.data[getImageOffset(I_next, x, y)] = ((w_prv_x * prv_x + w_nxt_x * nxt_x + w_prv_y * prv_y + w_nxt_y * nxt_y)) / (w_prv_x + w_nxt_x + w_prv_y + w_nxt_y);
-                // I_next.data[getImageOffset(I_next, x, y)] = (( prv_x + nxt_x + prv_y + nxt_y)) / 4.0;
             }
         }
-
+        
+        #pragma omp parallel for shared(lookup, new_lookups)
         for (auto i = 0; i < new_lookups.size(); i++) {
             lookup[new_lookups[i][0]][new_lookups[i][1]] = true;
         }
