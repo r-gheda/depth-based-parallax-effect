@@ -9,11 +9,13 @@ SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
 img = None
 drawing = False
 pt1_x , pt1_y = None , None
-depth_annotation_windowd = None
+depth_annotation_window = None
 canvas = None
 out = None
 scribbles = {}
 THICKNESS = 2
+depth_map = "depth_map.png"
+focused_image = "focused_image.png"
 
 def select_image():
     global SEL_IMAGE, img
@@ -51,26 +53,30 @@ def draw_handler(event):
             scribbles[(lasy+j, lasx+i)] = depth_slider.get()
     lasx, lasy = event.x, event.y
 
-def run():
-    global depth_annotation_windowd, canvas, depth_slider, scribbles
-    depth_annotation_windowd = tk.Tk()
-    depth_annotation_windowd.title("Draw")
+def update_focus_point(event):
+    global focus_x, focus_y
+    focus_x, focus_y = event.x, event.y
+
+def draw_annotations_callback():
+    global depth_annotation_window, canvas, depth_slider, scribbles
+    depth_annotation_window = tk.Tk()
+    depth_annotation_window.title("Draw")
     
-    canvas = tk.Canvas(depth_annotation_windowd, width=img.width, height=img.height)
+    canvas = tk.Canvas(depth_annotation_window, width=img.width, height=img.height)
     canvas.pack()
-    tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_windowd)
+    tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_window)
     canvas.create_image(img.width/2, img.height/2, image=tk_img)
 
     canvas.bind("<Button-1>", get_x_and_y)
     canvas.bind('<B1-Motion>', draw_handler)
 
-    depth_slider = tk.Scale(depth_annotation_windowd, from_=0, to=255, orient=tk.HORIZONTAL, label="Depth")
+    depth_slider = tk.Scale(depth_annotation_window, from_=0, to=255, orient=tk.HORIZONTAL, label="Depth")
     depth_slider.set(0)
     depth_slider.pack()
 
     scribbles = {}
 
-    depth_annotation_windowd.mainloop()
+    depth_annotation_window.mainloop()
 
 def save_scribbles():
     if os.path.exists("../outputs/scribbles"):
@@ -91,7 +97,7 @@ def run_poisson():
     save_scribbles()
     print(iterations)
 
-    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/poisson_out.png", "../outputs/scribbles", "poisson", iterations, beta]
+    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/" + str(depth_map), "../outputs/scribbles", "poisson", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
@@ -100,26 +106,26 @@ def run_poisson():
     print('Done')
     out = Image.open("../outputs/poisson_out.png")
     out.show()
-    # solve_poisson(img, scribbles)
 
 def run_anisotropic():
-    global img, scribbles
+    global img, scribbles, depth_map
     if not os.path.exists("../outputs"):
         os.makedirs("../outputs")
+    if os.path.exists("../outputs/" + str(depth_map)):
+        os.remove("../outputs/" + str(depth_map))
     img.save("../outputs/src_rgb.png")
     grey_img = img.convert('L')
     grey_img.save("../outputs/greyscale-input.png")
 
     save_scribbles()
-
-    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/anisotropic_out.png", "../outputs/scribbles", "anisotropic", iterations, beta]
+    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/" + str(depth_map), "../outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
     print('Done')
-    out = Image.open("../outputs/anisotropic_out.png")
+    out = Image.open("../outputs/" + str(depth_map))
     out.show()
 
 def update_iter(event):
@@ -129,6 +135,37 @@ def update_iter(event):
 def update_beta(event):
     global beta
     beta = event.widget.get()
+
+def update_aperture_size(event):
+    global aperture_size
+    aperture_size = event.widget.get()
+
+def select_focus():
+    global img
+    focus_selection_window = tk.Tk()
+    focus_selection_window.title("Select Focus")
+
+    canvas = tk.Canvas(focus_selection_window, width=img.width, height=img.height)
+    canvas.pack()
+    tk_img = ImageTk.PhotoImage(image=img, master=focus_selection_window)
+    canvas.create_image(img.width/2, img.height/2, image=tk_img)
+
+    canvas.bind("<Button-1>", update_focus_point)
+
+    focus_selection_window.mainloop()
+
+def run_bilateral_filter():
+    global img, depth_map, focus_x, focus_y, aperture_size, focused_image
+
+    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(depth_map), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
+    out = Image.open("../outputs/" + str(focused_image))
+    out.show()
+    pass
 
 window = tk.Tk()
 
@@ -148,7 +185,7 @@ draw_button = tk.Button(
     height=5,
     bg="green",
     fg="yellow",
-    command= run
+    command= draw_annotations_callback
 ).grid(row=1, column=0, columnspan=2)
 
 poisson_button = tk.Button(
@@ -178,5 +215,27 @@ beta_label = tk.Label(text="Beta").grid(row=5, column=0)
 beta_entry = tk.Entry()
 beta_entry.bind("<Return>", update_beta)
 beta_entry.grid(row=5, column=1)
+
+select_focus = tk.Button(
+    text="Select Focus",
+    width=25,
+    height=5,
+    bg="blue",
+    fg="yellow",
+    command= select_focus
+).grid(row=6, column=0, columnspan=2)
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=7, column=0)
+aperture_size = tk.Entry()
+aperture_size.bind("<Return>", update_aperture_size)
+aperture_size.grid(row=7, column=1)
+
+run_bilateral_filter_button = tk.Button(
+    text="Bilateral Filter",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_bilateral_filter
+).grid(row=8, column=0, columnspan=2)
 
 window.mainloop()
