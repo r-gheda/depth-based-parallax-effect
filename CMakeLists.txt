@@ -17,7 +17,7 @@ else()
 	add_subdirectory("../../../framework/" "${CMAKE_BINARY_DIR}/framework/")
 endif()
 
-add_executable(${MAIN_EXE_NAME} "src/main.cpp" "src/helpers.h")
+add_executable(${MAIN_EXE_NAME} "src/poisson_main.cpp" "src/helpers.h")
 
 target_compile_features(${MAIN_EXE_NAME} PRIVATE cxx_std_20)
 target_link_libraries(${MAIN_EXE_NAME} PRIVATE CGFramework)
