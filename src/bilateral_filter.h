@@ -3,7 +3,7 @@
 
 #include <map>
 
-const float DEPTH_SIGMA = 0.1;
+const float DEPTH_SIGMA = 0.01;
 const float SPACE_SIGMA = 2.0;
 
 template<typename T>
