@@ -14,7 +14,8 @@ canvas = None
 out = None
 scribbles = {}
 THICKNESS = 2
-depth_map = "anisotropic_out.png"
+depth_map = "depth_map.png"
+focused_image = "focused_image.png"
 
 def select_image():
     global SEL_IMAGE, img
@@ -66,7 +67,7 @@ def draw_annotations_callback():
     tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_window)
     canvas.create_image(img.width/2, img.height/2, image=tk_img)
 
-    canvas.bind("<Button-1>", update_focus_point)
+    canvas.bind("<Button-1>", get_x_and_y)
     canvas.bind('<B1-Motion>', draw_handler)
 
     depth_slider = tk.Scale(depth_annotation_window, from_=0, to=255, orient=tk.HORIZONTAL, label="Depth")
@@ -110,12 +111,13 @@ def run_anisotropic():
     global img, scribbles, depth_map
     if not os.path.exists("../outputs"):
         os.makedirs("../outputs")
+    if os.path.exists("../outputs/" + str(depth_map)):
+        os.remove("../outputs/" + str(depth_map))
     img.save("../outputs/src_rgb.png")
     grey_img = img.convert('L')
     grey_img.save("../outputs/greyscale-input.png")
 
     save_scribbles()
-
     arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/" + str(depth_map), "../outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
@@ -153,15 +155,15 @@ def select_focus():
     focus_selection_window.mainloop()
 
 def run_bilateral_filter():
-    global img, depth_map, focus_x, focus_y, aperture_size
+    global img, depth_map, focus_x, focus_y, aperture_size, focused_image
 
-    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.jpg", "../outputs/" + str(depth_map), str(focus_x), str(focus_y), aperture_size]
+    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(depth_map), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("../outputs/focused_image.png")
+    out = Image.open("../outputs/" + str(focused_image))
     out.show()
     pass
 
