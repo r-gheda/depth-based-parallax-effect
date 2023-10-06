@@ -13,7 +13,6 @@ depth_annotation_window = None
 canvas = None
 out = None
 scribbles = {}
-THICKNESS = 2
 depth_map = "depth_map.png"
 focused_image = "focused_image.png"
 
@@ -47,9 +46,9 @@ def draw_handler(event):
     global lasx, lasy
     canvas.create_line((lasx, lasy, event.x, event.y), 
                         fill=color, 
-                        width=3)
-    for i in range(int(-THICKNESS / 2), int(THICKNESS /2)):
-        for j in range(int(-THICKNESS / 2), int(THICKNESS /2)):
+                        width=thickness_slider.get())
+    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+        for j in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
             scribbles[(lasy+j, lasx+i)] = depth_slider.get()
     lasx, lasy = event.x, event.y
 
@@ -58,12 +57,12 @@ def update_focus_point(event):
     focus_x, focus_y = event.x, event.y
 
 def draw_annotations_callback():
-    global depth_annotation_window, canvas, depth_slider, scribbles
+    global depth_annotation_window, canvas, depth_slider, scribbles, thickness_slider
     depth_annotation_window = tk.Tk()
     depth_annotation_window.title("Draw")
     
     canvas = tk.Canvas(depth_annotation_window, width=img.width, height=img.height)
-    canvas.pack()
+    canvas.grid(row=0, columnspan=2)
     tk_img = ImageTk.PhotoImage(image=img, master=depth_annotation_window)
     canvas.create_image(img.width/2, img.height/2, image=tk_img)
 
@@ -72,7 +71,11 @@ def draw_annotations_callback():
 
     depth_slider = tk.Scale(depth_annotation_window, from_=0, to=255, orient=tk.HORIZONTAL, label="Depth")
     depth_slider.set(0)
-    depth_slider.pack()
+    depth_slider.grid(row=1, column=0)
+    
+    thickness_slider = tk.Scale(depth_annotation_window, from_=1, to=10, orient=tk.HORIZONTAL, label="Thickness")
+    thickness_slider.set(2)
+    thickness_slider.grid(row=1, column=1)
 
     scribbles = {}
 
