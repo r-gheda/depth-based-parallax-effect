@@ -3,10 +3,12 @@ from tkinter import filedialog as fd
 from PIL import ImageTk, Image
 import os
 import subprocess
+import dist_depth
 
 SEL_IMAGE = None
 SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
 img = None
+img_path = None
 drawing = False
 pt1_x , pt1_y = None , None
 depth_annotation_window = None
@@ -15,14 +17,24 @@ out = None
 scribbles = {}
 depth_map = "depth_map.png"
 focused_image = "focused_image.png"
+preficted_depth_map = "predicted_depth.png"
+computed_depth_map_loaded = False
+scribble_loaded = False
+predicted_depth_map_loaded = False
+focus_x = None
+focus_y = None
+iterations = 1000
+beta = 20
+aperture_size = 15
 
 def select_image():
-    global SEL_IMAGE, img
+    global SEL_IMAGE, img, img_path
     res = False
     while not res:
         SEL_IMAGE = fd.askopenfilename()
         try:
             img = Image.open(SEL_IMAGE)
+            img_path = SEL_IMAGE
         except IOError:
             print("Invalid file")
             continue
@@ -87,8 +99,6 @@ def save_scribbles():
     
     with open("../outputs/scribbles", "w") as f:
         for key, value in scribbles.items():
-            if (key[0] < 0) or (key[0] >= img.height) or (key[1] < 0) or (key[1] >= img.width):
-                continue
             f.write(str(key[0]) + " " + str(key[1]) + " " + str(value) + "\n")
 
 def run_poisson():
@@ -162,7 +172,7 @@ def select_focus():
 def run_bilateral_filter():
     global img, depth_map, focus_x, focus_y, aperture_size, focused_image
 
-    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(depth_map), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
+    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(predicted_depth_map), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
@@ -171,6 +181,18 @@ def run_bilateral_filter():
     out = Image.open("../outputs/" + str(focused_image))
     out.show()
     pass
+
+def run_cnn():
+    global predicted_depth_map
+    predicted_depth_map = "predicted_depth.png"
+    arglist = ["python3", "../src/dist_depth/run_rgb_cnn.py", img_path]
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
+    out = Image.open("../outputs/predicted_depth.png")
+    out.show()
 
 window = tk.Tk()
 
@@ -182,16 +204,35 @@ image_button = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_image
-).grid(row=0, column=0, columnspan=2)
+).grid(row=0, column=0, columnspan=4)
 
 draw_button = tk.Button(
-    text="Draw",
+    text="Draw Scribbles",
     width=25,
     height=5,
     bg="green",
     fg="yellow",
     command= draw_annotations_callback
 ).grid(row=1, column=0, columnspan=2)
+
+load_scribbles_button = tk.Button(
+    text="Load Scribbles",
+    width=25,
+    height=5,
+    bg="green",
+    fg="yellow",
+    command= draw_annotations_callback
+).grid(row=1, column=2, columnspan=2)
+
+iter_label = tk.Label(text="Number of iterations").grid(row=2, column=0)
+n_of_iter = tk.Entry()
+n_of_iter.bind("<Return>", update_iter)
+n_of_iter.grid(row=2, column=1)
+
+beta_label = tk.Label(text="Beta").grid(row=3, column=0)
+beta_entry = tk.Entry()
+beta_entry.bind("<Return>", update_beta)
+beta_entry.grid(row=3, column=1)
 
 poisson_button = tk.Button(
     text="Poisson",
@@ -200,7 +241,7 @@ poisson_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_poisson
-).grid(row=2, column=0, columnspan=2)
+).grid(row=4, column=0, columnspan=2)
 
 anisotropic_button = tk.Button(
     text="Anisotropic",
@@ -209,17 +250,31 @@ anisotropic_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_anisotropic
-).grid(row=3, column=0, columnspan=2)
+).grid(row=4, column=2, columnspan=2)
 
-iter_label = tk.Label(text="Number of iterations").grid(row=4, column=0)
-n_of_iter = tk.Entry()
-n_of_iter.bind("<Return>", update_iter)
-n_of_iter.grid(row=4, column=1)
 
-beta_label = tk.Label(text="Beta").grid(row=5, column=0)
-beta_entry = tk.Entry()
-beta_entry.bind("<Return>", update_beta)
-beta_entry.grid(row=5, column=1)
+run_cnn_button = tk.Button(
+    text="Run CNN",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_cnn
+).grid(row=5, column=0, columnspan=2)
+
+merge_depth_maps_button = tk.Button(
+    text="Merge Depth Maps",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_cnn
+).grid(row=5, column=2, columnspan=2)
+
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=7, column=0)
+aperture_size = tk.Entry()
+aperture_size.bind("<Return>", update_aperture_size)
+aperture_size.grid(row=7, column=1)
 
 select_focus = tk.Button(
     text="Select Focus",
@@ -228,19 +283,48 @@ select_focus = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_focus
-).grid(row=6, column=0, columnspan=2)
-aperture_size_label = tk.Label(text="Aperture Size").grid(row=7, column=0)
-aperture_size = tk.Entry()
-aperture_size.bind("<Return>", update_aperture_size)
-aperture_size.grid(row=7, column=1)
+).grid(row=8, column=0, columnspan=2)
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
     width=25,
     height=5,
-    bg="red",
+    bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=8, column=0, columnspan=2)
+).grid(row=8, column=2, columnspan=2)
+
+run_parallax_button = tk.Button(
+    text="Parallax",
+    width=25,
+    height=5,
+    bg="purple",
+    fg="yellow",
+    command= run_bilateral_filter
+).grid(row=9, column=1, columnspan=4)
+
+file_open_label = tk.Label(text="File Opened: " + str(SEL_IMAGE)).grid(row=0, column=5, columnspan=2)
+scribbles_status_label = tk.Label(text="Scibbles: " + str(scribble_loaded)).grid(row=1, column=5, columnspan=2)
+computed_depth_map_status_label = tk.Label(text="Computed Depth Map: " + str(computed_depth_map_loaded)).grid(row=4, column=5, columnspan=2)
+predicted_depth_map_status_label = tk.Label(text="Predicted Depth Map: " + str(predicted_depth_map_loaded)).grid(row=5, column=5, columnspan=2)
+number_of_iterations_label = tk.Label(text="Number of iterations: " + str(iterations)).grid(row=2, column=5, columnspan=2)
+beta_label = tk.Label(text="Beta: " + str(beta)).grid(row=3, column=5, columnspan=2)
+selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=8, column=5, columnspan=2)
+selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=7, column=5, columnspan=2)
+
+depth_map_to_be_used = None
+
+R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=1,
+                  )
+R1.grid(row=6, column=0, columnspan=2)
+
+R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=2,
+                  )
+R2.grid(row=6, column=1, columnspan=2)
+
+R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=3,
+                  )
+R3.grid(row=6, column=2, columnspan=2)
+
 
 window.mainloop()
