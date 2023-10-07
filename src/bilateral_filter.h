@@ -1,9 +1,10 @@
 #pragma once
 #include "helpers.h"
 
+#include <cmath>
 #include <map>
 
-const float DEPTH_SIGMA = 0.01;
+const float DEPTH_SIGMA = 0.1;
 const float SPACE_SIGMA = 2.0;
 
 template<typename T>
@@ -39,8 +40,7 @@ std::vector<float> getGaussianKernel(float aperture_size, float sigma = SPACE_SI
 
 float gaussian_kernel(float mean, float x, float sigma=DEPTH_SIGMA)
 {
-    float res = exp(- (x-mean) * (x-mean) / (2 * sigma * sigma));
-    return res;
+    return exp(- (x-mean) * (x-mean) / (2 * sigma * sigma));
 }
 
 float gaussian_kernel_2d(float x, float y, float sigma)
@@ -61,7 +61,7 @@ ImageRGB cross_bilateral_filter(const ImageRGB& input_rgb_image, const ImageFloa
         for (int y = 0; y < output_image.height; ++y)
         {
             float normalization_factor = gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x, y)]);
-            output_image.data[getImageOffset(output_image, x, y)] = normalization_factor* input_rgb_image.data[getImageOffset(input_rgb_image, x, y)];
+            output_image.data[getImageOffset(output_image, x, y)] = normalization_factor * input_rgb_image.data[getImageOffset(input_rgb_image, x, y)];
     
             #pragma omp parallel for shared(output_image)
             for (int x_a = -aperture_size; x_a < aperture_size; ++x_a)
@@ -78,7 +78,7 @@ ImageRGB cross_bilateral_filter(const ImageRGB& input_rgb_image, const ImageFloa
                     }
 
                     float spatial_weight = spatial_kernel[(x_a + aperture_size) * (2 * aperture_size + 1) + (y_a + aperture_size)];
-                    float depth_weight = gaussian_kernel(depth_map.data[getImageOffset(depth_map, x, y)], depth_map.data[getImageOffset(depth_map, x_i, y_i)]);
+                    float depth_weight = pow(1-gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x_i, y_i)]), 2);
                     float weight = spatial_weight * depth_weight;
                     normalization_factor += weight;
 
