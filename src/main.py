@@ -3,10 +3,12 @@ from tkinter import filedialog as fd
 from PIL import ImageTk, Image
 import os
 import subprocess
+import dist_depth
 
 SEL_IMAGE = None
 SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
 img = None
+img_path = None
 drawing = False
 pt1_x , pt1_y = None , None
 depth_annotation_window = None
@@ -17,12 +19,13 @@ depth_map = "depth_map.png"
 focused_image = "focused_image.png"
 
 def select_image():
-    global SEL_IMAGE, img
+    global SEL_IMAGE, img, img_path
     res = False
     while not res:
         SEL_IMAGE = fd.askopenfilename()
         try:
             img = Image.open(SEL_IMAGE)
+            img_path = SEL_IMAGE
         except IOError:
             print("Invalid file")
             continue
@@ -170,6 +173,16 @@ def run_bilateral_filter():
     out.show()
     pass
 
+def run_cnn():
+    arglist = ["python3", "../src/dist_depth/run_rgb_cnn.py", img_path]
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
+    out = Image.open("../outputs/predicted_depth.png")
+    out.show()
+
 window = tk.Tk()
 
 #Create a button that lets to select an image file
@@ -240,5 +253,14 @@ run_bilateral_filter_button = tk.Button(
     fg="yellow",
     command= run_bilateral_filter
 ).grid(row=8, column=0, columnspan=2)
+
+run_cnn_button = tk.Button(
+    text="Run CNN",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_cnn
+).grid(row=9, column=0, columnspan=2)
 
 window.mainloop()

@@ -12,11 +12,11 @@ import sys
 
 torch.backends.cudnn.benchmark = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-output_path = "../../outputs/"
+output_path = "../outputs/"
 
 if __name__ == "__main__":
 
-    dir_prefix = "./"
+    dir_prefix = "./dist_depth/"
 
     with torch.no_grad():
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         file = sys.argv[1]
 
         raw_img = np.transpose(
-            cv2.imread(dir_prefix + file, -1)[:, :, :3], (2, 0, 1)
+            cv2.imread(file, -1)[:, :, :3], (2, 0, 1)
         )
         input_image = torch.from_numpy(raw_img).float().to(device)
         input_image = (input_image / 255.0).unsqueeze(0)
@@ -73,6 +73,11 @@ if __name__ == "__main__":
         # convert disparity to depth
         depth = output_to_depth(out_resized, 0.1, 10)
         metric_depth = depth.cpu().numpy().squeeze()
+        print(metric_depth.min())
+        print(metric_depth.max())
+        metric_depth_norm = 255.0 * (metric_depth - metric_depth.min()) / (
+            metric_depth.max() - metric_depth.min()
+        )
         
-        im = Image.fromarray(((metric_depth - 1) * 255 / 3).astype(np.uint8))
+        im = Image.fromarray((metric_depth_norm).astype(np.uint8))
         im.save(output_path + 'predicted_depth.png')
