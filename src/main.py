@@ -87,6 +87,8 @@ def save_scribbles():
     
     with open("../outputs/scribbles", "w") as f:
         for key, value in scribbles.items():
+            if (key[0] < 0) or (key[0] >= img.height) or (key[1] < 0) or (key[1] >= img.width):
+                continue
             f.write(str(key[0]) + " " + str(key[1]) + " " + str(value) + "\n")
 
 def run_poisson():
