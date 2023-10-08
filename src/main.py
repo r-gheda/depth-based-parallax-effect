@@ -42,8 +42,7 @@ def select_image():
             print("Invalid file")
             continue
         if not img.format in SUPPORTED_FORMATS:
-            print("Unsupported format")
-            print(img.format)
+            print("Unsupported format: " + str(img.format))
         else:
             res = True    
             img_name = img_path.split('/')[-1].split('.')[0]
@@ -114,7 +113,6 @@ def run_poisson():
     grey_img.save("../outputs/greyscale-input.png")
 
     save_scribbles()
-    print(iterations)
 
     arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/" + str(computed_depth_map), "../outputs/scribbles", "poisson", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -122,7 +120,6 @@ def run_poisson():
     print(stdout)
     print(stderr)
     proc.wait()
-    print('Done')
     out = Image.open("../outputs/poisson_out.png")
     out.show()
 
@@ -143,7 +140,6 @@ def run_anisotropic():
     print(stdout)
     print(stderr)
     proc.wait()
-    print('Done')
     out = Image.open("../outputs/" + str(computed_depth_map))
     out.show()
 
@@ -175,7 +171,6 @@ def select_focus():
 
 def run_bilateral_filter():
     global img, computed_depth_map, focus_x, focus_y, aperture_size, focused_image
-    print(depth_map_to_be_used.get())
     arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(depth_map_to_be_used.get()), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
@@ -224,8 +219,6 @@ def run_merged_depth_maps():
     print(stderr)
     proc.wait()
 
-    print('Done')
-    print(merged_depth_map)
     out = Image.open("../outputs/" + str(merged_depth_map))
     p = Image.open("../outputs/" + str(predicted_depth_map))
     tmp = out.convert('L')
@@ -295,12 +288,10 @@ def run_sam():
 def edit_image_pos(event):
     global lasx, lasy, percentages, depth_img, pred_img, computed_img
     lasx, lasy = event.x, event.y
-    print('pos')
     for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
         if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
             percentages[(lasx + i, lasy + i)] = min(percentages[(lasx + i, lasy + i)] + intensity_slider.get()/10.0, 1.0)
             depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
-            print(percentages[(lasx+i, lasy+i)])
             color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
             x = max(min(lasx + i + 1, depth_img.width - 1), 0)
             y = max(min(lasy + i + 1, depth_img.height - 1), 0)
@@ -309,12 +300,10 @@ def edit_image_pos(event):
 def edit_image_neg(event):
     global lasx, lasy, percentages, depth_img, pred_img, computed_img
     lasx, lasy = event.x, event.y
-    print('neg')
     for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
         if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
             percentages[(lasx + i, lasy + i)] = max(percentages[(lasx + i, lasy + i)] - intensity_slider.get()/10.0, 0.0)
             depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
-            print(percentages[(lasx+i, lasy+i)])
             color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
             x = max(min(lasx + i + 1, depth_img.width - 1), 0)
             y = max(min(lasy + i + 1, depth_img.height - 1), 0)
