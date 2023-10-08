@@ -237,7 +237,6 @@ def run_merged_depth_maps():
 def apply_sam_mask(event):
     global im, im_bak, tk_img, canvas, sam_root, curr_sam_mask, mask_dir
     im = im_bak.copy()
-    print(event.widget.get())
     curr_sam_mask = {}
     mask = Image.open(mask_dir + event.widget.get())
     for i in range(mask.width):
@@ -260,18 +259,16 @@ def run_sam():
     global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im, mask_dir, img_name
 
     depth_map_im = Image.open("../outputs/" + str(depth_map_to_be_used.get())).convert('L')
-
-    arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
-
-    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate()
-    print(stdout)
-    print(stderr)
-    proc.wait()
+    if not os.path.exists("../outputs/sam-out/" + img_name):      
+        arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
+        proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        print(stdout)
+        print(stderr)
+        proc.wait()
 
     im = Image.open(img_path)
     im_bak = im.copy()
-    print(img_path)
     sam_root = tk.Tk()
     canvas = tk.Canvas(sam_root, width=im.width, height=im.height)
     canvas.grid(row=0, columnspan=3)
@@ -279,7 +276,7 @@ def run_sam():
     tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
     canvas.create_image(im.width/2, im.height/2, image=tk_img)
     os.chdir("../outputs/sam-out/" + img_name)
-    mask_dir = os.getcwd()
+    mask_dir = os.getcwd() + '/'
     files = [f for f in os.listdir() if os.path.isfile(f)]
     os.chdir("../../../src")
     Combo = ttk.Combobox(sam_root, values = files)
