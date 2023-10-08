@@ -225,9 +225,70 @@ def run_merged_depth_maps():
     out = Image.open("../outputs/" + str(merged_depth_map))
     p = Image.open("../outputs/" + str(predicted_depth_map))
     tmp = out.convert('L')
-    out = Image.blend(tmp, p, 0.5)
+    # out = Image.blend(tmp, p, 0.5)
     out.save("../outputs/" + str(merged_depth_map))
     out.show()
+
+def edit_image_pos(event):
+    global lasx, lasy, percentages, depth_img, pred_img, computed_img
+    lasx, lasy = event.x, event.y
+    print('pos')
+    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+        if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
+            percentages[(lasx + i, lasy + i)] = min(percentages[(lasx + i, lasy + i)] + intensity_slider.get()/10.0, 1.0)
+            depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
+            print(percentages[(lasx+i, lasy+i)])
+            color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
+            x = max(min(lasx + i + 1, depth_img.width - 1), 0)
+            y = max(min(lasy + i + 1, depth_img.height - 1), 0)
+            canvas.create_line((lasx+i, lasy+i, x, y), fill=color, width=thickness_slider.get())
+
+def edit_image_neg(event):
+    global lasx, lasy, percentages, depth_img, pred_img, computed_img
+    lasx, lasy = event.x, event.y
+    print('neg')
+    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+        if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
+            percentages[(lasx + i, lasy + i)] = max(percentages[(lasx + i, lasy + i)] - intensity_slider.get()/10.0, 0.0)
+            depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
+            print(percentages[(lasx+i, lasy+i)])
+            color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
+            x = max(min(lasx + i + 1, depth_img.width - 1), 0)
+            y = max(min(lasy + i + 1, depth_img.height - 1), 0)
+            canvas.create_line((lasx+i, lasy+i, x, y), fill=color, width=1)
+
+
+def edit_merged_depth_map():
+    global depth_annotation_window, canvas, intensity_slider, scribbles, thickness_slider, depth_img, pred_img, computed_img, percentages
+    depth_annotation_window = tk.Tk()
+    depth_annotation_window.title("Edit merged depth map")
+
+    depth_img = Image.open('../outputs/' + str(merged_depth_map)).convert('L')
+    pred_img  = Image.open('../outputs/' + str(predicted_depth_map)).convert('L')
+    computed_img = Image.open('../outputs/' + str(computed_depth_map)).convert('L')
+    percentages = {}
+    for i in range(depth_img.width):
+        for j in range(depth_img.height):
+            percentages[(i, j)] = 0.5
+    
+    canvas = tk.Canvas(depth_annotation_window, width=depth_img.width, height=depth_img.height)
+    canvas.grid(row=0, columnspan=2)
+    tk_img = ImageTk.PhotoImage(image=depth_img, master=depth_annotation_window)
+    canvas.create_image(depth_img.width/2, depth_img.height/2, image=tk_img)
+
+    canvas.bind("<Button-1>", edit_image_pos)
+    canvas.bind("<Button-3>", edit_image_neg)
+
+    intensity_slider = tk.Scale(depth_annotation_window, from_=0, to=10, orient=tk.HORIZONTAL, label="Intensity")
+    intensity_slider.set(0)
+    intensity_slider.grid(row=1, column=0)
+    
+    thickness_slider = tk.Scale(depth_annotation_window, from_=1, to=10, orient=tk.HORIZONTAL, label="Thickness")
+    thickness_slider.set(2)
+    thickness_slider.grid(row=1, column=1)
+
+    depth_annotation_window.mainloop()
+
 
 window = tk.Tk()
 
@@ -306,10 +367,19 @@ merge_depth_maps_button = tk.Button(
     command= run_merged_depth_maps
 ).grid(row=5, column=2, columnspan=2)
 
-aperture_size_label = tk.Label(text="Aperture Size").grid(row=7, column=0)
+edit_merged_depth_map_button = tk.Button(
+    text="Edit Merged Depth Map",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= edit_merged_depth_map
+).grid(row=6, column=0, columnspan=4)
+
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=8, column=0)
 aperture_size = tk.Entry()
 aperture_size.bind("<Return>", update_aperture_size)
-aperture_size.grid(row=7, column=1)
+aperture_size.grid(row=8, column=1)
 
 select_focus = tk.Button(
     text="Select Focus",
@@ -318,7 +388,7 @@ select_focus = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_focus
-).grid(row=8, column=0, columnspan=2)
+).grid(row=9, column=0, columnspan=2)
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
@@ -327,7 +397,7 @@ run_bilateral_filter_button = tk.Button(
     bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=8, column=2, columnspan=2)
+).grid(row=9, column=2, columnspan=2)
 
 run_parallax_button = tk.Button(
     text="Parallax",
@@ -336,7 +406,7 @@ run_parallax_button = tk.Button(
     bg="purple",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=9, column=1, columnspan=4)
+).grid(row=10, column=0, columnspan=4)
 
 file_open_label = tk.Label(text="File Opened: " + str(SEL_IMAGE)).grid(row=0, column=5, columnspan=2)
 scribbles_status_label = tk.Label(text="Scibbles: " + str(scribble_loaded)).grid(row=1, column=5, columnspan=2)
@@ -344,23 +414,23 @@ computed_depth_map_status_label = tk.Label(text="Computed Depth Map: " + str(com
 predicted_depth_map_status_label = tk.Label(text="Predicted Depth Map: " + str(predicted_depth_map_loaded)).grid(row=5, column=5, columnspan=2)
 number_of_iterations_label = tk.Label(text="Number of iterations: " + str(iterations)).grid(row=2, column=5, columnspan=2)
 beta_label = tk.Label(text="Beta: " + str(beta)).grid(row=3, column=5, columnspan=2)
-selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=8, column=5, columnspan=2)
-selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=7, column=5, columnspan=2)
+selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=9, column=5, columnspan=2)
+selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=8, column=5, columnspan=2)
 
 depth_map_to_be_used = tk.StringVar(window, value=computed_depth_map)
 
 
 R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=computed_depth_map
                   )
-R1.grid(row=6, column=0, columnspan=2)
+R1.grid(row=7, column=0, columnspan=2)
 
 R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=predicted_depth_map,
                   )
-R2.grid(row=6, column=1, columnspan=2)
+R2.grid(row=7, column=1, columnspan=2)
 
 R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=merged_depth_map,
                   )
-R3.grid(row=6, column=2, columnspan=2)
+R3.grid(row=7, column=2, columnspan=2)
 
 
 window.mainloop()
