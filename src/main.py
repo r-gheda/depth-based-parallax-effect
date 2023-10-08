@@ -31,7 +31,7 @@ beta = 20
 aperture_size = 15
 
 def select_image():
-    global SEL_IMAGE, img, img_path
+    global SEL_IMAGE, img, img_path, img_name
     res = False
     while not res:
         SEL_IMAGE = fd.askopenfilename()
@@ -46,6 +46,7 @@ def select_image():
             print(img.format)
         else:
             res = True    
+            img_name = img_path.split('/')[-1].split('.')[0]
 
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code
@@ -217,36 +218,6 @@ def run_merged_depth_maps():
 
     save_scribbles()
     arglist = ["../build/poisson", "../outputs/" + str(predicted_depth_map), "../outputs/greyscale-input.png", "../outputs/" + str(merged_depth_map), "../outputs/scribbles", "anisotropic", iterations, beta]
-
-def apply_sam_mask(event):
-    global im, im_bak, tk_img, canvas, sam_root, curr_sam_mask
-    im = im_bak.copy()
-    print(event.widget.get())
-    curr_sam_mask = {}
-    mask = Image.open(event.widget.get())
-    for i in range(mask.width):
-        for j in range(mask.height):
-            if mask.getpixel((i,j)) == 0:
-                curr_sam_mask[(i,j)] = im.getpixel((i,j))
-                im.putpixel((i,j), (0,0,0))
-    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
-    canvas.create_image(im.width/2, im.height/2, image=tk_img)
-
-def update_mask_depth_level():
-    global depth_level_entry, curr_sam_mask, depth_map_im
-    max_depth = max([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
-    min_depth = min([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
-    for key in curr_sam_mask:
-        depth_map_im.putpixel(key, depth_level_entry.get() * (depth_map_im.getpixel(key) - min_depth) / (max_depth - min_depth))
-    depth_map_im.save("../outputs/" + str(sam_depth))
-
-def run_sam():
-    global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im
-
-    depth_map_im = Image.open("../outputs/" + str(depth_map_to_be_used))
-
-    arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
-
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
@@ -262,6 +233,68 @@ def run_sam():
     out.save("../outputs/" + str(merged_depth_map))
     out.show()
 
+
+def apply_sam_mask(event):
+    global im, im_bak, tk_img, canvas, sam_root, curr_sam_mask, mask_dir
+    im = im_bak.copy()
+    print(event.widget.get())
+    curr_sam_mask = {}
+    mask = Image.open(mask_dir + event.widget.get())
+    for i in range(mask.width):
+        for j in range(mask.height):
+            if mask.getpixel((i,j)) != 0:
+                curr_sam_mask[(i,j)] = im.getpixel((i,j))
+                im.putpixel((i,j), (0,0,0))
+    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+
+def update_mask_depth_level(event):
+    global depth_level_entry, curr_sam_mask, depth_map_im
+    max_depth = max([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
+    min_depth = min([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
+    for key in curr_sam_mask:
+        depth_map_im.putpixel(key, max(min(int(2.0 * float(depth_level_entry.get()) * depth_map_im.getpixel(key) / float(max_depth + min_depth)), 255), 0))
+    depth_map_im.save("../outputs/" + str(sam_depth))
+
+def run_sam():
+    global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im, mask_dir, img_name
+
+    depth_map_im = Image.open("../outputs/" + str(depth_map_to_be_used.get())).convert('L')
+
+    arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
+
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
+
+    im = Image.open(img_path)
+    im_bak = im.copy()
+    print(img_path)
+    sam_root = tk.Tk()
+    canvas = tk.Canvas(sam_root, width=im.width, height=im.height)
+    canvas.grid(row=0, columnspan=3)
+
+    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+    os.chdir("../outputs/sam-out/" + img_name)
+    mask_dir = os.getcwd()
+    files = [f for f in os.listdir() if os.path.isfile(f)]
+    os.chdir("../../../src")
+    Combo = ttk.Combobox(sam_root, values = files)
+    Combo.set("Pick a SAM mask")
+    Combo.grid(row=1, column=0)
+
+    depth_level_label = tk.Label(sam_root, text="Depth Level").grid(row=1, column=1)
+    depth_level_entry = tk.Entry(sam_root)
+    depth_level_entry.bind("<Return>", update_mask_depth_level)
+    depth_level_entry.grid(row=1, column=2)
+
+    Combo.bind("<<ComboboxSelected>>", apply_sam_mask)
+    
+    sam_root.mainloop()
+    
 def edit_image_pos(event):
     global lasx, lasy, percentages, depth_img, pred_img, computed_img
     lasx, lasy = event.x, event.y
@@ -323,30 +356,6 @@ def edit_merged_depth_map():
     depth_annotation_window.mainloop()
 
 
-    im = Image.open(img_path)
-    im_bak = im.copy()
-    print(img_path)
-    sam_root = tk.Tk()
-    canvas = tk.Canvas(sam_root, width=im.width, height=im.height)
-    canvas.grid(row=0, columnspan=3)
-
-    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
-    canvas.create_image(im.width/2, im.height/2, image=tk_img)
-    os.chdir("../outputs/sam-out/montenegro")
-    files = [f for f in os.listdir() if os.path.isfile(f)]
-    
-    Combo = ttk.Combobox(sam_root, values = files)
-    Combo.set("Pick a SAM mask")
-    Combo.grid(row=1, column=0)
-
-    depth_level_label = tk.Label(sam_root, text="Depth Level").grid(row=1, column=1)
-    depth_level_entry = tk.Entry(sam_root)
-    depth_level_entry.bind("<Return>", update_mask_depth_level)
-    depth_level_entry.grid(row=1, column=2)
-
-    Combo.bind("<<ComboboxSelected>>", apply_sam_mask)
-    
-    sam_root.mainloop()
 
 window = tk.Tk()
 
