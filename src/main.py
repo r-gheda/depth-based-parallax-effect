@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog as fd
 from PIL import ImageTk, Image
 import os
@@ -194,6 +195,49 @@ def run_cnn():
     out = Image.open("../outputs/predicted_depth.png")
     out.show()
 
+def apply_sam_mask(event):
+    global im, im_bak, tk_img, canvas, sam_root
+    im = im_bak.copy()
+    print(event.widget.get())
+    mask = Image.open(event.widget.get())
+    for i in range(mask.width):
+        for j in range(mask.height):
+            if mask.getpixel((i,j)) == 0:
+                im.putpixel((i,j), (0,0,0))
+    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+
+
+
+def run_sam():
+    global img_path, im, im_bak, tk_img, canvas, sam_root
+    # arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
+    # proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # stdout, stderr = proc.communicate()
+    # print(stdout)
+    # print(stderr)
+    # proc.wait()
+
+    im = Image.open(img_path)
+    im_bak = im.copy()
+    print(img_path)
+    sam_root = tk.Tk()
+    canvas = tk.Canvas(sam_root, width=im.width, height=im.height)
+    canvas.grid(row=0, columnspan=2)
+
+    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+    os.chdir("../outputs/sam-out/montenegro")
+    files = [f for f in os.listdir() if os.path.isfile(f)]
+    
+    Combo = ttk.Combobox(sam_root, values = files)
+    Combo.set("Pick a SAM mask")
+    Combo.grid(row=1, columnspan=2)
+
+    Combo.bind("<<ComboboxSelected>>", apply_sam_mask)
+    
+    sam_root.mainloop()
+
 window = tk.Tk()
 
 #Create a button that lets to select an image file
@@ -271,10 +315,19 @@ merge_depth_maps_button = tk.Button(
     command= run_cnn
 ).grid(row=5, column=2, columnspan=2)
 
-aperture_size_label = tk.Label(text="Aperture Size").grid(row=7, column=0)
+run_sam_button = tk.Button(
+    text="Run SAM",
+    width=25,
+    height=5,
+    bg="red",
+    fg="yellow",
+    command= run_sam
+).grid(row=6, column=0, columnspan=4)
+
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=8, column=0)
 aperture_size = tk.Entry()
 aperture_size.bind("<Return>", update_aperture_size)
-aperture_size.grid(row=7, column=1)
+aperture_size.grid(row=8, column=1)
 
 select_focus = tk.Button(
     text="Select Focus",
@@ -283,7 +336,7 @@ select_focus = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_focus
-).grid(row=8, column=0, columnspan=2)
+).grid(row=9, column=0, columnspan=2)
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
@@ -292,7 +345,7 @@ run_bilateral_filter_button = tk.Button(
     bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=8, column=2, columnspan=2)
+).grid(row=9, column=2, columnspan=2)
 
 run_parallax_button = tk.Button(
     text="Parallax",
@@ -301,7 +354,7 @@ run_parallax_button = tk.Button(
     bg="purple",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=9, column=1, columnspan=4)
+).grid(row=10, column=1, columnspan=4)
 
 file_open_label = tk.Label(text="File Opened: " + str(SEL_IMAGE)).grid(row=0, column=5, columnspan=2)
 scribbles_status_label = tk.Label(text="Scibbles: " + str(scribble_loaded)).grid(row=1, column=5, columnspan=2)
@@ -309,22 +362,22 @@ computed_depth_map_status_label = tk.Label(text="Computed Depth Map: " + str(com
 predicted_depth_map_status_label = tk.Label(text="Predicted Depth Map: " + str(predicted_depth_map_loaded)).grid(row=5, column=5, columnspan=2)
 number_of_iterations_label = tk.Label(text="Number of iterations: " + str(iterations)).grid(row=2, column=5, columnspan=2)
 beta_label = tk.Label(text="Beta: " + str(beta)).grid(row=3, column=5, columnspan=2)
-selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=8, column=5, columnspan=2)
-selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=7, column=5, columnspan=2)
+selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=9, column=5, columnspan=2)
+selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=8, column=5, columnspan=2)
 
 depth_map_to_be_used = None
 
 R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=1,
                   )
-R1.grid(row=6, column=0, columnspan=2)
+R1.grid(row=7, column=0, columnspan=2)
 
 R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=2,
                   )
-R2.grid(row=6, column=1, columnspan=2)
+R2.grid(row=7, column=1, columnspan=2)
 
 R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=3,
                   )
-R3.grid(row=6, column=2, columnspan=2)
+R3.grid(row=7, column=2, columnspan=2)
 
 
 window.mainloop()
