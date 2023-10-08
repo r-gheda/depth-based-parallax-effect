@@ -20,7 +20,7 @@ int main(int argc, char** argv)
         std::cerr << "Usage: " << argv[0] << " <input_image> <src_rgb_image> <output_image> <scribbles> <method> <n_of_itertions>" << std::endl;
     }
     auto input_image = ImageFloat(argv[1]);
-    auto input_rgb_image = ImageRGB(argv[2]);
+    auto input_greyscale = ImageFloat(argv[2]);
 
     // Load scriblles from file
     std::ifstream scribles_file(argv[4]);
@@ -40,7 +40,6 @@ int main(int argc, char** argv)
     while (scribles_file >> x >> y >> val) {
         scribbles[getImageOffset(input_image, y, x)] = val / 255.0f;
         lookup[y][x] = true;
-        // std::cout << getImageOffset(input_image, y, x) << " " << scribbles[getImageOffset(input_image, y, x)] << std::endl;
     }
 
     auto start = std::chrono::steady_clock::now();
@@ -48,12 +47,12 @@ int main(int argc, char** argv)
     if (strcmp(argv[5], "poisson") == 0){
     // Solve Poisson equation
         std::cout << "Solving Poisson equation..." << std::endl;
-        auto solved_luminance = solvePoisson(input_image, scribbles, lookup, std::stoi(argv[6]));
+        auto solved_luminance = solvePoisson(input_greyscale, scribbles, lookup, std::stoi(argv[6]));
         solved_luminance.writeToFile(outDirPath / argv[3]);
     } else
     {
         std::cout << "Solving Anisotropic equation..." << std::endl;
-        auto solved_luminance = solveAnisotropic(input_image, input_rgb_image, scribbles, lookup, std::stoi(argv[6]), std::stoi(argv[7]));
+        auto solved_luminance = solveAnisotropic(input_image, input_greyscale, scribbles, lookup, std::stoi(argv[6]), std::stoi(argv[7]));
         std::cout << "done stuff";
         solved_luminance.writeToFile(outDirPath / argv[3]);
     }
