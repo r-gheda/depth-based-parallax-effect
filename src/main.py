@@ -341,7 +341,36 @@ def edit_merged_depth_map():
 
     depth_annotation_window.mainloop()
 
+def load_scribble_from_file():
+    global scribbles
+    res = False
+    while not res:
+        scribble_file = fd.askopenfilename()
+        scribbles = {}
+        try:
+            with open(scribble_file, "r") as f:
+                for line in f:
+                    line = line.strip().split()
+                    scribbles[(int(line[0]), int(line[1]))] = int(line[2]) 
+                res = True
+        except IOError:
+            print("Invalid file")
+            continue   
 
+def save_scribbles_from_file():
+    global scribbles
+    # popup a text entry for saving a file containing the scribble map
+    res = False
+    while not res:
+        scribble_file = fd.asksaveasfilename()
+        try:
+            with open(scribble_file, "w") as f:
+                for key, value in scribbles.items():
+                    f.write(str(key[0]) + " " + str(key[1]) + " " + str(value) + "\n")
+                res = True
+        except IOError:
+            print("Invalid file")
+            continue
 
 window = tk.Tk()
 
@@ -364,24 +393,33 @@ draw_button = tk.Button(
     command= draw_annotations_callback
 ).grid(row=1, column=0, columnspan=2)
 
+save_scibbles_button = tk.Button(
+    text="Save Scribbles",
+    width=25,
+    height=5,
+    bg="green",
+    fg="yellow",
+    command= save_scribbles_from_file
+).grid(row=2, column=0, columnspan=2)
+
 load_scribbles_button = tk.Button(
     text="Load Scribbles",
     width=25,
     height=5,
     bg="green",
     fg="yellow",
-    command= draw_annotations_callback
-).grid(row=1, column=2, columnspan=2)
+    command= load_scribble_from_file
+).grid(row=2, column=2, columnspan=2)
 
-iter_label = tk.Label(text="Number of iterations").grid(row=2, column=0)
+iter_label = tk.Label(text="Number of iterations").grid(row=3, column=0)
 n_of_iter = tk.Entry()
 n_of_iter.bind("<Return>", update_iter)
-n_of_iter.grid(row=2, column=1)
+n_of_iter.grid(row=3, column=1)
 
-beta_label = tk.Label(text="Beta").grid(row=3, column=0)
+beta_label = tk.Label(text="Beta").grid(row=4, column=0)
 beta_entry = tk.Entry()
 beta_entry.bind("<Return>", update_beta)
-beta_entry.grid(row=3, column=1)
+beta_entry.grid(row=4, column=1)
 
 poisson_button = tk.Button(
     text="Poisson",
@@ -390,7 +428,7 @@ poisson_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_poisson
-).grid(row=4, column=0, columnspan=2)
+).grid(row=5, column=0, columnspan=2)
 
 anisotropic_button = tk.Button(
     text="Anisotropic",
@@ -399,7 +437,7 @@ anisotropic_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_anisotropic
-).grid(row=4, column=2, columnspan=2)
+).grid(row=5, column=2, columnspan=2)
 
 
 run_cnn_button = tk.Button(
@@ -409,7 +447,7 @@ run_cnn_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_cnn
-).grid(row=5, column=0, columnspan=2)
+).grid(row=6, column=0, columnspan=2)
 
 merge_depth_maps_button = tk.Button(
     text="Merge Depth Maps",
@@ -418,7 +456,7 @@ merge_depth_maps_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_merged_depth_maps
-).grid(row=5, column=2, columnspan=2)
+).grid(row=6, column=2, columnspan=2)
 
 edit_merged_depth_map_button = tk.Button(
     text="Edit Merged Depth Map",
@@ -427,7 +465,7 @@ edit_merged_depth_map_button = tk.Button(
     bg="red",
     fg="yellow",
     command= edit_merged_depth_map
-).grid(row=6, column=0, columnspan=2)
+).grid(row=7, column=0, columnspan=2)
 
 run_sam_button = tk.Button(
     text="Run SAM",
@@ -436,12 +474,12 @@ run_sam_button = tk.Button(
     bg="red",
     fg="yellow",
     command= run_sam
-).grid(row=6, column=2, columnspan=2)
+).grid(row=7, column=2, columnspan=2)
 
-aperture_size_label = tk.Label(text="Aperture Size").grid(row=8, column=0)
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=9, column=0)
 aperture_size = tk.Entry()
 aperture_size.bind("<Return>", update_aperture_size)
-aperture_size.grid(row=8, column=1)
+aperture_size.grid(row=9, column=1)
 
 select_focus = tk.Button(
     text="Select Focus",
@@ -450,7 +488,7 @@ select_focus = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_focus
-).grid(row=9, column=0, columnspan=2)
+).grid(row=10, column=0, columnspan=2)
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
@@ -459,7 +497,7 @@ run_bilateral_filter_button = tk.Button(
     bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=9, column=2, columnspan=2)
+).grid(row=10, column=2, columnspan=2)
 
 run_parallax_button = tk.Button(
     text="Parallax",
@@ -468,31 +506,31 @@ run_parallax_button = tk.Button(
     bg="purple",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=10, column=0, columnspan=4)
+).grid(row=11, column=0, columnspan=4)
 
 file_open_label = tk.Label(text="File Opened: " + str(SEL_IMAGE)).grid(row=0, column=5, columnspan=2)
 scribbles_status_label = tk.Label(text="Scibbles: " + str(scribble_loaded)).grid(row=1, column=5, columnspan=2)
-computed_depth_map_status_label = tk.Label(text="Computed Depth Map: " + str(computed_depth_map_loaded)).grid(row=4, column=5, columnspan=2)
-predicted_depth_map_status_label = tk.Label(text="Predicted Depth Map: " + str(predicted_depth_map_loaded)).grid(row=5, column=5, columnspan=2)
-number_of_iterations_label = tk.Label(text="Number of iterations: " + str(iterations)).grid(row=2, column=5, columnspan=2)
-beta_label = tk.Label(text="Beta: " + str(beta)).grid(row=3, column=5, columnspan=2)
-selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=9, column=5, columnspan=2)
-selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=8, column=5, columnspan=2)
+computed_depth_map_status_label = tk.Label(text="Computed Depth Map: " + str(computed_depth_map_loaded)).grid(row=5, column=5, columnspan=2)
+predicted_depth_map_status_label = tk.Label(text="Predicted Depth Map: " + str(predicted_depth_map_loaded)).grid(row=6, column=5, columnspan=2)
+number_of_iterations_label = tk.Label(text="Number of iterations: " + str(iterations)).grid(row=3, column=5, columnspan=2)
+beta_label = tk.Label(text="Beta: " + str(beta)).grid(row=4, column=5, columnspan=2)
+selected_focus_label = tk.Label(text="Selected Focus: (" + str(focus_x) + ", " + str(focus_y) + ")").grid(row=10, column=5, columnspan=2)
+selected_aperture_size_label = tk.Label(text="Aperture Size: " + str(aperture_size)).grid(row=9, column=5, columnspan=2)
 
 depth_map_to_be_used = tk.StringVar(window, value=computed_depth_map)
 
 
 R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=computed_depth_map
                   )
-R1.grid(row=7, column=0, columnspan=2)
+R1.grid(row=8, column=0, columnspan=2)
 
 R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=predicted_depth_map,
                   )
-R2.grid(row=7, column=1, columnspan=2)
+R2.grid(row=8, column=1, columnspan=2)
 
 R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=merged_depth_map,
                   )
-R3.grid(row=7, column=2, columnspan=2)
+R3.grid(row=8, column=2, columnspan=2)
 
 
 window.mainloop()
