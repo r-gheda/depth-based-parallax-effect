@@ -19,6 +19,7 @@ scribbles = {}
 depth_map = "depth_map.png"
 focused_image = "focused_image.png"
 preficted_depth_map = "predicted_depth.png"
+sam_depth = "sam_depth.png"
 computed_depth_map_loaded = False
 scribble_loaded = False
 predicted_depth_map_loaded = False
@@ -196,34 +197,45 @@ def run_cnn():
     out.show()
 
 def apply_sam_mask(event):
-    global im, im_bak, tk_img, canvas, sam_root
+    global im, im_bak, tk_img, canvas, sam_root, curr_sam_mask
     im = im_bak.copy()
     print(event.widget.get())
+    curr_sam_mask = {}
     mask = Image.open(event.widget.get())
     for i in range(mask.width):
         for j in range(mask.height):
             if mask.getpixel((i,j)) == 0:
+                curr_sam_mask[(i,j)] = im.getpixel((i,j))
                 im.putpixel((i,j), (0,0,0))
     tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
     canvas.create_image(im.width/2, im.height/2, image=tk_img)
 
-
+def update_mask_depth_level():
+    global depth_level_entry, curr_sam_mask, depth_map_im
+    max_depth = max([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
+    min_depth = min([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
+    for key in curr_sam_mask:
+        depth_map_im.putpixel(key, depth_level_entry.get() * (depth_map_im.getpixel(key) - min_depth) / (max_depth - min_depth))
+    depth_map_im.save("../outputs/" + str(sam_depth))
 
 def run_sam():
-    global img_path, im, im_bak, tk_img, canvas, sam_root
-    # arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
-    # proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # stdout, stderr = proc.communicate()
-    # print(stdout)
-    # print(stderr)
-    # proc.wait()
+    global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im
+
+    depth_map_im = Image.open("../outputs/" + str(depth_map_to_be_used))
+
+    arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
 
     im = Image.open(img_path)
     im_bak = im.copy()
     print(img_path)
     sam_root = tk.Tk()
     canvas = tk.Canvas(sam_root, width=im.width, height=im.height)
-    canvas.grid(row=0, columnspan=2)
+    canvas.grid(row=0, columnspan=3)
 
     tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
     canvas.create_image(im.width/2, im.height/2, image=tk_img)
@@ -232,7 +244,12 @@ def run_sam():
     
     Combo = ttk.Combobox(sam_root, values = files)
     Combo.set("Pick a SAM mask")
-    Combo.grid(row=1, columnspan=2)
+    Combo.grid(row=1, column=0)
+
+    depth_level_label = tk.Label(sam_root, text="Depth Level").grid(row=1, column=1)
+    depth_level_entry = tk.Entry(sam_root)
+    depth_level_entry.bind("<Return>", update_mask_depth_level)
+    depth_level_entry.grid(row=1, column=2)
 
     Combo.bind("<<ComboboxSelected>>", apply_sam_mask)
     
