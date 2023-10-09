@@ -9,6 +9,10 @@ Then install and activate the conda environment
 ```
 conda env create -f environment.yml
 ```
+Install DistDepth CNN and SAM models
+```
+chmod +x download_models.sh && source download_models.sh
+```
 In order to run the program, just 
 ```
 python3 src/main.py
