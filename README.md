@@ -3,13 +3,13 @@
 ## Build and run
 Build the C++ executables
 ```
-mkdir build && cd build/ && cmake .. && make && cd ..
+mkdir -p build && cd build/ && cmake .. && make && cd ..
 ```
 Then install and activate the conda environment 
 ```
 conda env create -f environment.yml
 ```
-Install DistDepth CNN and SAM models
+Download DistDepth CNN [[3]](#3) and SAM models[[4]](#4)
 ```
 chmod +x download_models.sh && source download_models.sh
 ```
