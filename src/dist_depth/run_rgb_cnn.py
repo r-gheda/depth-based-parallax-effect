@@ -12,11 +12,11 @@ import sys
 
 torch.backends.cudnn.benchmark = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-output_path = "../outputs/"
+output_path = "outputs/"
 
 if __name__ == "__main__":
 
-    dir_prefix = "./dist_depth/"
+    dir_prefix = "src/dist_depth/"
 
     with torch.no_grad():
 

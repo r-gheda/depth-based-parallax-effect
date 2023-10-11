@@ -26,9 +26,9 @@ scribble_loaded = False
 predicted_depth_map_loaded = False
 focus_x = 0
 focus_y = 0
-iterations = 1000
-beta = 20
-aperture_size = 15
+iterations = None
+beta = None
+aperture_size = None
 
 global scribbles_status_label
 
@@ -47,8 +47,8 @@ def select_image():
             print("Unsupported format: " + str(img.format))
         else:
             res = True    
-            file_text_var.set("File Opened: " + str(SEL_IMAGE))
             img_name = img_path.split('/')[-1].split('.')[0]
+            file_text_var.set("File Opened: " + str(SEL_IMAGE.split('/')[-1]))
 
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code
@@ -102,52 +102,52 @@ def draw_annotations_callback():
     depth_annotation_window.mainloop()
 
 def save_scribbles():
-    if os.path.exists("../outputs/scribbles"):
-        os.remove("../outputs/scribbles")
+    if os.path.exists("outputs/scribbles"):
+        os.remove("outputs/scribbles")
     
-    with open("../outputs/scribbles", "w") as f:
+    with open("outputs/scribbles", "w") as f:
         for key, value in scribbles.items():
             f.write(str(key[0]) + " " + str(key[1]) + " " + str(value) + "\n")
 
 def run_poisson():
     global img, scribbles
-    if not os.path.exists("../outputs"):
-        os.makedirs("../outputs")
-    img.save("../outputs/src_rgb.png")
+    if not os.path.exists("outputs"):
+        os.makedirs("outputs")
+    img.save("outputs/src_rgb.png")
     grey_img = img.convert('L')
-    grey_img.save("../outputs/greyscale-input.png")
+    grey_img.save("outputs/greyscale-input.png")
 
     save_scribbles()
 
-    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/src_rgb.png", "../outputs/" + str(computed_depth_map), "../outputs/scribbles", "poisson", iterations, beta]
+    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/src_rgb.png", "outputs/" + str(computed_depth_map), "outputs/scribbles", "poisson", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("../outputs/poisson_out.png")
+    out = Image.open("outputs/" + str(computed_depth_map))
     out.show()
-    out.save("../outputs/" + str(computed_depth_map))
+    out.save("outputs/" + str(computed_depth_map))
 
 def run_anisotropic():
     global img, scribbles, computed_depth_map
-    if not os.path.exists("../outputs"):
-        os.makedirs("../outputs")
-    if os.path.exists("../outputs/" + str(computed_depth_map)):
-        os.remove("../outputs/" + str(computed_depth_map))
-    img.save("../outputs/src_rgb.png")
+    if not os.path.exists("outputs"):
+        os.makedirs("outputs")
+    if os.path.exists("outputs/" + str(computed_depth_map)):
+        os.remove("outputs/" + str(computed_depth_map))
+    img.save("outputs/src_rgb.png")
     grey_img = img.convert('L')
-    grey_img.save("../outputs/greyscale-input.png")
+    grey_img.save("outputs/greyscale-input.png")
 
     save_scribbles()
-    arglist = ["../build/poisson", "../outputs/greyscale-input.png", "../outputs/greyscale-input.png", "../outputs/" + str(computed_depth_map), "../outputs/scribbles", "anisotropic", iterations, beta]
+    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/greyscale-input.png", "outputs/" + str(computed_depth_map), "outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("../outputs/" + str(computed_depth_map))
-    out.save("../outputs/" + str(computed_depth_map))
+    out = Image.open("outputs/" + str(computed_depth_map))
+    out.save("outputs/" + str(computed_depth_map))
     out.show()
     computed_depth_map_loaded = True
     computed_text_var.set("Computed Depth Map: " + str(computed_depth_map_loaded))
@@ -183,61 +183,61 @@ def select_focus():
 
 def run_bilateral_filter():
     global img, computed_depth_map, focus_x, focus_y, aperture_size, focused_image
-    arglist = ["../build/bilateral_filter", "../outputs/src_rgb.png", "../outputs/" +  str(depth_map_to_be_used.get()), "../outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
+    arglist = ["build/bilateral_filter", "outputs/src_rgb.png", "outputs/" +  str(depth_map_to_be_used.get()), "outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("../outputs/" + str(focused_image))
+    out = Image.open("outputs/" + str(focused_image))
     out.show()
     pass
 
 def run_cnn():
     global predicted_depth_map
     predicted_depth_map = "predicted_depth.png"
-    arglist = ["python3", "../src/dist_depth/run_rgb_cnn.py", img_path]
+    arglist = ["python3", "src/dist_depth/run_rgb_cnn.py", img_path]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("../outputs/predicted_depth.png")
+    out = Image.open("outputs/predicted_depth.png")
     out.show()
     predicted_depth_map_loaded = True
     predicted_text_var.set("Predicted Depth Map: " + str(predicted_depth_map_loaded))
 
 def merge_depth_maps():
     global grey_scale_img, predicted_depth_map
-    gs_img = Image.open("../outputs/greyscale-input.png")
-    predicted_depth_map = Image.open("../outputs/" + str(predicted_depth_map))
+    gs_img = Image.open("outputs/greyscale-input.png")
+    predicted_depth_map = Image.open("outputs/" + str(predicted_depth_map))
     merged_depth_maps = Image.blend(gs_img, predicted_depth_map, 0.5)
-    merged_depth_maps.save("../outputs/merged_greyscale.png")
+    merged_depth_maps.save("outputs/merged_greyscale.png")
     merged_depth_maps.show()
 
 def run_merged_depth_maps():
     global img, scribbles, computed_depth_map, predicted_depth_map
-    if not os.path.exists("../outputs"):
-        os.makedirs("../outputs")
-    if os.path.exists("../outputs/" + str(computed_depth_map)):
-        os.remove("../outputs/" + str(computed_depth_map))
-    img.save("../outputs/src_rgb.png")
+    if not os.path.exists("outputs"):
+        os.makedirs("outputs")
+    if os.path.exists("outputs/" + str(computed_depth_map)):
+        os.remove("outputs/" + str(computed_depth_map))
+    img.save("outputs/src_rgb.png")
     grey_img = img.convert('L')
-    grey_img.save("../outputs/greyscale-input.png")
+    grey_img.save("outputs/greyscale-input.png")
 
     save_scribbles()
-    arglist = ["../build/poisson", "../outputs/" + str(predicted_depth_map), "../outputs/greyscale-input.png", "../outputs/" + str(merged_depth_map), "../outputs/scribbles", "anisotropic", iterations, beta]
+    arglist = ["build/poisson", "outputs/" + str(predicted_depth_map), "outputs/greyscale-input.png", "outputs/" + str(merged_depth_map), "outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
 
-    out = Image.open("../outputs/" + str(merged_depth_map))
-    p = Image.open("../outputs/" + str(predicted_depth_map))
+    out = Image.open("outputs/" + str(merged_depth_map))
+    p = Image.open("outputs/" + str(predicted_depth_map))
     tmp = out.convert('L')
     # out = Image.blend(tmp, p, 0.5)
-    out.save("../outputs/" + str(merged_depth_map))
+    out.save("outputs/" + str(merged_depth_map))
     out.show()
 
 
@@ -256,18 +256,18 @@ def apply_sam_mask(event):
 
 def update_mask_depth_level(event):
     global depth_level_entry, curr_sam_mask, depth_map_im
-    max_depth = max([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
-    min_depth = min([depth_map_im.getpixel((i,j)) for i,j in curr_sam_mask.keys()])
+    avg_depth = sum([depth_map_im.getpixel(k) for k in curr_sam_mask.keys()]) / len(curr_sam_mask)
+    diff = int(depth_level_entry.get()) - avg_depth
     for key in curr_sam_mask:
-        depth_map_im.putpixel(key, max(min(int(2.0 * float(depth_level_entry.get()) * depth_map_im.getpixel(key) / float(max_depth + min_depth)), 255), 0))
-    depth_map_im.save("../outputs/" + str(sam_depth))
+        depth_map_im.putpixel(key, max(min(int(depth_map_im.getpixel(key) + (diff)), 255), 0))
+    depth_map_im.save("outputs/" + str(sam_depth))
 
 def run_sam():
     global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im, mask_dir, img_name
 
-    depth_map_im = Image.open("../outputs/" + str(depth_map_to_be_used.get())).convert('L')
-    if not os.path.exists("../outputs/sam-out/" + img_name):      
-        arglist = ["python3", "segment-anything/scripts/amg.py",'--checkpoint', '../models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', '../outputs/sam-out', '--device', 'cpu']
+    depth_map_im = Image.open("outputs/" + str(depth_map_to_be_used.get())).convert('L')
+    if not os.path.exists("outputs/sam-out/" + img_name):      
+        arglist = ["python3", "src/segment-anything/scripts/amg.py",'--checkpoint', 'models/sam_vit_h_4b8939.pth','--model', 'vit_h', '--input', img_path, '--output', 'outputs/sam-out', '--device', 'cpu']
         proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = proc.communicate()
         print(stdout)
@@ -282,10 +282,13 @@ def run_sam():
 
     tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
     canvas.create_image(im.width/2, im.height/2, image=tk_img)
-    os.chdir("../outputs/sam-out/" + img_name)
+    os.chdir("outputs/sam-out/" + img_name)
     mask_dir = os.getcwd() + '/'
     files = [f for f in os.listdir() if os.path.isfile(f)]
-    os.chdir("../../../src")
+    os.chdir("../../..")
+    depth_map_im.save("outputs/" + str(sam_depth))
+    stream = os.popen('xdg-open outputs/' + str(sam_depth))
+
     Combo = ttk.Combobox(sam_root, values = files)
     Combo.set("Pick a SAM mask")
     Combo.grid(row=1, column=0)
@@ -329,9 +332,9 @@ def edit_merged_depth_map():
     depth_annotation_window = tk.Tk()
     depth_annotation_window.title("Edit merged depth map")
 
-    depth_img = Image.open('../outputs/' + str(merged_depth_map)).convert('L')
-    pred_img  = Image.open('../outputs/' + str(predicted_depth_map)).convert('L')
-    computed_img = Image.open('../outputs/' + str(computed_depth_map)).convert('L')
+    depth_img = Image.open('outputs/' + str(merged_depth_map)).convert('L')
+    pred_img  = Image.open('outputs/' + str(predicted_depth_map)).convert('L')
+    computed_img = Image.open('outputs/' + str(computed_depth_map)).convert('L')
     percentages = {}
     for i in range(depth_img.width):
         for j in range(depth_img.height):

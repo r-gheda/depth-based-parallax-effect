@@ -7,10 +7,6 @@
 #include "omp.h"
 #include <chrono>
 
-static const std::filesystem::path dataDirPath { DATA_DIR };
-static const std::filesystem::path outDirPath { OUTPUT_DIR };
-static const std::filesystem::path outFileName { "out.jpg" };
-
 int main(int argc, char** argv)
 {
     printOpenMPStatus();
@@ -48,13 +44,13 @@ int main(int argc, char** argv)
     // Solve Poisson equation
         std::cout << "Solving Poisson equation..." << std::endl;
         auto solved_luminance = solvePoisson(input_greyscale, scribbles, lookup, std::stoi(argv[6]));
-        solved_luminance.writeToFile(outDirPath / argv[3]);
+        solved_luminance.writeToFile(argv[3]);
     } else
     {
         std::cout << "Solving Anisotropic equation..." << std::endl;
         auto solved_luminance = solveAnisotropic(input_image, input_greyscale, scribbles, lookup, std::stoi(argv[6]), std::stoi(argv[7]));
         std::cout << "done stuff";
-        solved_luminance.writeToFile(outDirPath / argv[3]);
+        solved_luminance.writeToFile(argv[3]);
     }
 
     auto end = std::chrono::steady_clock::now();
