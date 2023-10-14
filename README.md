@@ -23,7 +23,7 @@ An image of the program GUI is provided as a reference for instructions on how t
 ![](readme-imgs/gui.png)
 ### Basic Features
 ### 1. Load an RGB image from disk
-An image can be opened using the "Open A File" button above. The name of the opened file will be shown aside. A set of sample images are provided in the [examples directory](examples/).
+An image can be opened using the "Open A File" button above. The name of the opened file will be shown aside. A set of sample images are provided in the [data directory](data/).
 ### 2. Allow users to scribble depth annotations in UI
 It is possible to draw scribbles using the "Draw Scribbles" button. In order to save them it is sufficient to close the drawing window. Please note that drawing scribbles is not mandatory for using the subsuquent functionalities.
 ### 3. Diffuse annotations across the image using Poisson image editing
