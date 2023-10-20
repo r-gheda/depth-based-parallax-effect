@@ -191,7 +191,7 @@ def run_bilateral_filter():
     proc.wait()
     out = Image.open("outputs/" + str(focused_image))
     out.show()
-    pass
+    
 
 def run_cnn():
     global predicted_depth_map
@@ -391,6 +391,15 @@ def save_scribbles_from_file():
             print("Invalid file")
             continue
 
+def run_parallax():
+    global depth_map_to_be_used
+    arglist = ["build/parallax", 'outputs/src_rgb.png', 'outputs/' + str(depth_map_to_be_used.get()), str(60), str(0.02)]
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    print(stdout)
+    print(stderr)
+    proc.wait()
+
 window = tk.Tk()
 
 #Create a button that lets to select an image file
@@ -524,7 +533,7 @@ run_parallax_button = tk.Button(
     height=5,
     bg="purple",
     fg="yellow",
-    command= run_bilateral_filter
+    command= run_parallax
 ).grid(row=11, column=0, columnspan=4)
 
 file_text_var = tk.StringVar(window, value="File Opened: " + str(SEL_IMAGE))
