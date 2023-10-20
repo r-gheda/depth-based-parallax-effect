@@ -4,12 +4,14 @@ from tkinter import filedialog as fd
 from PIL import ImageTk, Image
 import os
 import subprocess
-import dist_depth
+import cv2
+import glob
 
 SEL_IMAGE = None
 SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
 img = None
 img_path = None
+img_size = None
 drawing = False
 pt1_x , pt1_y = None , None
 depth_annotation_window = None
@@ -33,7 +35,7 @@ aperture_size = None
 global scribbles_status_label
 
 def select_image():
-    global SEL_IMAGE, img, img_path, img_name
+    global SEL_IMAGE, img, img_path, img_name, img_size
     res = False
     while not res:
         SEL_IMAGE = fd.askopenfilename()
@@ -48,6 +50,7 @@ def select_image():
         else:
             res = True    
             img_name = img_path.split('/')[-1].split('.')[0]
+            img_size = img.size
             file_text_var.set("File Opened: " + str(SEL_IMAGE.split('/')[-1]))
 
 def _from_rgb(rgb):
@@ -392,13 +395,26 @@ def save_scribbles_from_file():
             continue
 
 def run_parallax():
-    global depth_map_to_be_used
-    arglist = ["build/parallax", 'outputs/src_rgb.png', 'outputs/' + str(depth_map_to_be_used.get()), str(60), str(0.02)]
+    global depth_map_to_be_used, img_size
+    arglist = ["build/parallax", 'outputs/src_rgb.png', 'outputs/' + str(depth_map_to_be_used.get()), str(180), str(0.01)]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
+
+    out = cv2.VideoWriter('outputs/output_video.avi',cv2.VideoWriter_fourcc(*'DIVX'), 30, img_size)
+
+    for i in range(60):
+        img = cv2.imread('outputs/frames/' + str(i) + '.png')
+        out.write(img)
+
+    for i in reversed(range(60)):
+        img = cv2.imread('outputs/frames/' + str(i) + '.png')
+        out.write(img)
+    
+
+    out.release()
 
 window = tk.Tk()
 

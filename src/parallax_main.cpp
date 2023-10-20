@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         670.f
     );  
     
-    std::string out_directory = "output/frames/";
+    std::string out_directory = "outputs/frames/";
     if (!std::filesystem::exists(out_directory))
     {
         std::filesystem::create_directory(out_directory);
@@ -66,7 +66,6 @@ int main(int argc, char** argv)
 
     for (int i = - frames / 2; i < frames / 2; ++i)
     {
-        std::cout << "iter: " << i << std::endl;
         // Forward warp the image. We use the scaled disparity.
         auto img_forward = forwardWarpImage(image, depth_map, target_disparity, i*warp_factor);
         // Inpaint the holes in the forward warping image.
