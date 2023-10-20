@@ -39,9 +39,9 @@ All results are saved in the [outputs directory](outputs/) and automatically sho
 ### 1. Use a pretrained RGB->Depth CNN to supplement the depth
 Depth can be predicted using the DistDepth model by Meta AI [[3]](#3). Just press the "Run CNN" button in order to run it.
 ### 2. Find a user-friendly way to combine predicted depth map and user scribbles
-It is possible to "merge" depth-maps obtain from scribbles and CNN using the "Merge Depth Maps" button. What it does is running an anisotropic Poisson image editing initializing the depth map as the CNN predicted depth-map. This allows to fix some errors that brought up from lack of enough scribbles from the users and brings to more realistic results with a lower amount of iterations.
+It is possible to "merge" depth-maps obtain from scribbles and CNN using the "Merge Depth Maps" button. What it does is running an anisotropic Poisson image editing initializing the depth map as the CNN predicted depth-map. This allows to fix some errors that brought up from lack of enough scribbles from the users and brings to more realistic results with a lower amount of iterations and user scribbles.
 ### 3. Implement Ken-Burns effect with depth-based parallax
-TBD
+In order to run the depth-based Parallax effect select a depth map using the dedicated radio button and press the Parallax button.
 ### Extra Custom Features
 ### 1. Allow users to save and load scribbles using files
 In this program it is possible to save scribbles into file and load scribbles from file using the relative buttons. 
