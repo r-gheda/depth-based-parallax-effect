@@ -53,6 +53,10 @@ struct ImageGradient {
     ImageFloat y;
 };
 
+struct ImageWithMask {
+    ImageRGB image;
+    ImageFloat mask;
+};
 
 /// <summary>
 /// Prints helpful information about OpenMP.
