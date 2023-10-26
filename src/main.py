@@ -35,7 +35,7 @@ aperture_size = None
 global scribbles_status_label
 
 def select_image():
-    global SEL_IMAGE, img, img_path, img_name, img_size
+    global SEL_IMAGE, img, img_path, img_name, img_size, scribbles
     res = False
     while not res:
         SEL_IMAGE = fd.askopenfilename()
@@ -52,6 +52,8 @@ def select_image():
             img_name = img_path.split('/')[-1].split('.')[0]
             img_size = img.size
             file_text_var.set("File Opened: " + str(SEL_IMAGE.split('/')[-1]))
+
+        scribbles = {}
 
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code
@@ -72,6 +74,11 @@ def draw_handler(event):
         for j in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
             scribbles[(lasy+j, lasx+i)] = depth_slider.get()
     lasx, lasy = event.x, event.y
+
+def discard_scribbles_handler():
+    global scribbles, scribble_loaded
+    scribbles = {}
+    scribble_loaded = False
 
 def update_focus_point(event):
     global focus_x, focus_y
@@ -99,7 +106,6 @@ def draw_annotations_callback():
     thickness_slider.set(2)
     thickness_slider.grid(row=1, column=1)
 
-    scribbles = {}
     scribble_loaded = True
     scribble_text_var.set("Scribbles loaded: " + str(scribble_loaded))
     depth_annotation_window.mainloop()
@@ -412,7 +418,6 @@ def run_parallax():
     for i in reversed(range(60)):
         img = cv2.imread('outputs/frames/' + str(i) + '.png')
         out.write(img)
-    
 
     out.release()
 
@@ -436,6 +441,15 @@ draw_button = tk.Button(
     fg="yellow",
     command= draw_annotations_callback
 ).grid(row=1, column=0, columnspan=2)
+
+discard_button = tk.Button(
+    text="Discard Scribbles",
+    width="25",
+    height="5",
+    bg="green",
+    fg="yellow",
+    command=discard_scribbles_handler
+).grid(row=1, column=2, columnspan=2)
 
 save_scibbles_button = tk.Button(
     text="Save Scribbles",
