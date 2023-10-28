@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, ImageDraw
 import os
 import subprocess
 import cv2
@@ -23,6 +23,7 @@ focused_image = "focused_image.png"
 predicted_depth_map = "predicted_depth.png"
 merged_depth_map = "merged_depth_map.png"
 sam_depth = "sam_depth.png"
+edited_depth_map = "edited_depth_map.png"
 computed_depth_map_loaded = False
 scribble_loaded = False
 predicted_depth_map_loaded = False
@@ -312,60 +313,80 @@ def run_sam():
     sam_root.mainloop()
     
 def edit_image_pos(event):
-    global lasx, lasy, percentages, depth_img, pred_img, computed_img
+    global lasx, lasy, color, depth_img, intensity_slider, val
     lasx, lasy = event.x, event.y
-    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
-        if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
-            percentages[(lasx + i, lasy + i)] = min(percentages[(lasx + i, lasy + i)] + intensity_slider.get()/10.0, 1.0)
-            depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
-            color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
-            x = max(min(lasx + i + 1, depth_img.width - 1), 0)
-            y = max(min(lasy + i + 1, depth_img.height - 1), 0)
-            canvas.create_line((lasx+i, lasy+i, x, y), fill=color, width=thickness_slider.get())
+    val = min(depth_img.getpixel((lasx, lasy)) + intensity_slider.get(), 255)
+    color = _from_rgb((val, val, val))
+    return
 
 def edit_image_neg(event):
-    global lasx, lasy, percentages, depth_img, pred_img, computed_img
+    global lasx, lasy, color, depth_img, intensity_slider
     lasx, lasy = event.x, event.y
-    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
-        if (lasx + i >= 0) and (lasx+i < depth_img.width) and (lasy + i >= 0) and (lasy + i < depth_img.height):
-            percentages[(lasx + i, lasy + i)] = max(percentages[(lasx + i, lasy + i)] - intensity_slider.get()/10.0, 0.0)
-            depth_img.putpixel((lasx+i, lasy+i), int(percentages[(lasx, lasy)]*pred_img.getpixel((lasx+i, lasy+i)) + (1 - percentages[(lasx, lasy)])*computed_img.getpixel((lasx, lasy))))
-            color = _from_rgb((depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i)), depth_img.getpixel((lasx+i, lasy+i))))
-            x = max(min(lasx + i + 1, depth_img.width - 1), 0)
-            y = max(min(lasy + i + 1, depth_img.height - 1), 0)
-            canvas.create_line((lasx+i, lasy+i, x, y), fill=color, width=1)
+    val = max(depth_img.getpixel((lasx, lasy)) - intensity_slider.get(), 0)
+    color = _from_rgb((val, val, val))
+    return
 
+def draw_handler_pos_edit(event):
+    global lasx, lasy, color, depth_img, intensity_slider, thickness_slider, canvas, val, draw_depth_img
+    val = min(depth_img.getpixel((event.x, event.y)) + intensity_slider.get(), 255)
+    color = _from_rgb((val, val, val))
+    canvas.create_line((lasx, lasy, event.x, event.y), 
+                        fill=color, 
+                        width=thickness_slider.get())
+    
+    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+        for j in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+            draw_depth_img.line((event.x, event.y, lasx, lasy), fill=color, width=thickness_slider.get())
+    depth_img.save('outputs/' + str(edited_depth_map))
+    lasx, lasy = event.x, event.y
+
+def draw_handler_neg_edit(event):
+    global lasx, lasy, color, depth_img, intensity_slider, thickness_slider, canvas, val, draw_depth_img
+    val = min(depth_img.getpixel((event.x, event.y)) - intensity_slider.get(), 255)
+    color = _from_rgb((val, val, val))
+    canvas.create_line((lasx, lasy, event.x, event.y), 
+                        fill=color, 
+                        width=thickness_slider.get())
+    for i in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+        for j in range(int(-thickness_slider.get() / 2), int(thickness_slider.get() /2)):
+            draw_depth_img.line((event.x, event.y, lasx, lasy), fill=color, width=thickness_slider.get())
+    depth_img.save('outputs/' + str(edited_depth_map))
+    lasx, lasy = event.x, event.y
 
 def edit_merged_depth_map():
-    global depth_annotation_window, canvas, intensity_slider, scribbles, thickness_slider, depth_img, pred_img, computed_img, percentages
-    depth_annotation_window = tk.Tk()
-    depth_annotation_window.title("Edit merged depth map")
+    global depth_map_to_be_used, intensity_slider, thickness_slider, depth_img, canvas, draw_depth_img
+    im = Image.open('outputs/' + str(depth_map_to_be_used.get()))
+    im_bak = im.copy()
+    edit_root = tk.Tk()
+    canvas = tk.Canvas(edit_root, width=im.width, height=im.height)
+    canvas.grid(row=0, columnspan=3)
 
-    depth_img = Image.open('outputs/' + str(merged_depth_map)).convert('L')
-    pred_img  = Image.open('outputs/' + str(predicted_depth_map)).convert('L')
-    computed_img = Image.open('outputs/' + str(computed_depth_map)).convert('L')
-    percentages = {}
-    for i in range(depth_img.width):
-        for j in range(depth_img.height):
-            percentages[(i, j)] = 0.5
-    
-    canvas = tk.Canvas(depth_annotation_window, width=depth_img.width, height=depth_img.height)
-    canvas.grid(row=0, columnspan=2)
-    tk_img = ImageTk.PhotoImage(image=depth_img, master=depth_annotation_window)
-    canvas.create_image(depth_img.width/2, depth_img.height/2, image=tk_img)
+    tk_img = ImageTk.PhotoImage(image=im, master=edit_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+    if (os.path.exists('outputs/' + str(edited_depth_map))):
+        stream = os.popen('rm outputs/' + str(edited_depth_map))
+        stream.read()
+    stream = os.popen('cp outputs/' + str(depth_map_to_be_used.get()) + ' outputs/' + str(edited_depth_map))
+    # wait for stream to finish
+    stream.read()
+
+    depth_img = Image.open('outputs/' + str(edited_depth_map)).convert('L')
+    draw_depth_img = ImageDraw.Draw(depth_img)
 
     canvas.bind("<Button-1>", edit_image_pos)
+    canvas.bind('<B1-Motion>', draw_handler_pos_edit)
     canvas.bind("<Button-3>", edit_image_neg)
+    canvas.bind('<B3-Motion>', draw_handler_neg_edit)
 
-    intensity_slider = tk.Scale(depth_annotation_window, from_=0, to=10, orient=tk.HORIZONTAL, label="Intensity")
+    intensity_slider = tk.Scale(edit_root, from_=0, to=50, orient=tk.HORIZONTAL, label="Intensity")
     intensity_slider.set(0)
     intensity_slider.grid(row=1, column=0)
     
-    thickness_slider = tk.Scale(depth_annotation_window, from_=1, to=10, orient=tk.HORIZONTAL, label="Thickness")
+    thickness_slider = tk.Scale(edit_root, from_=1, to=10, orient=tk.HORIZONTAL, label="Thickness")
     thickness_slider.set(2)
     thickness_slider.grid(row=1, column=1)
 
-    depth_annotation_window.mainloop()
+    edit_root.mainloop()
 
 def load_scribble_from_file():
     global scribbles, scribble_loaded
@@ -517,7 +538,7 @@ merge_depth_maps_button = tk.Button(
 ).grid(row=6, column=2, columnspan=2)
 
 edit_merged_depth_map_button = tk.Button(
-    text="Edit Merged Depth Map",
+    text="Manual Edit Depth Map",
     width=25,
     height=5,
     bg="red",
@@ -594,19 +615,23 @@ depth_map_to_be_used = tk.StringVar(window, value=computed_depth_map)
 
 R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=computed_depth_map
                   )
-R1.grid(row=8, column=0, columnspan=2)
+R1.grid(row=8, column=0, columnspan=1)
 
 R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=predicted_depth_map,
                   )
-R2.grid(row=8, column=1, columnspan=2)
+R2.grid(row=8, column=1, columnspan=1)
 
 R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=merged_depth_map,
                   )
-R3.grid(row=8, column=2, columnspan=2)
+R3.grid(row=8, column=2, columnspan=1)
 
 R4 = tk.Radiobutton(window, text="SAM Depth Map", variable=depth_map_to_be_used, value=sam_depth,
                     )
-R4.grid(row=8, column=3, columnspan=2)
+R4.grid(row=8, column=3, columnspan=1)
+
+R5 = tk.Radiobutton(window, text="Edited Depth Map", variable=depth_map_to_be_used, value=edited_depth_map,
+                    )
+R5.grid(row=8, column=4, columnspan=1)
 
 
 window.mainloop()
