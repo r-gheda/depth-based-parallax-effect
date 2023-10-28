@@ -38,7 +38,6 @@ float pixel_coeff(int x_1, int y_1, int x_2, int y_2, const ImageFloat& img, flo
 
     diff = abs(pxl_1 - pxl_2);
     
-    // diff = abs((pxl_1.r + pxl_1.g + pxl_1.b) - (pxl_2.r + pxl_2.g + pxl_2.b));
     return exp(-beta * diff); 
 }
 
@@ -58,8 +57,8 @@ ImageFloat solvePoisson(const ImageFloat& input_image, std::map<int, float>  scr
         I_next.data[i] = input_image.data[i];
         
         if (lookup[i % I.width][i / I.width]) {
-            I.data[i] = scribbles[i] ; // / 255.0f;
-            I_next.data[i] = scribbles[i] ; // / 255.0f;
+            I.data[i] = scribbles[i] ; 
+            I_next.data[i] = scribbles[i] ;
         }
     }
 
@@ -78,7 +77,6 @@ ImageFloat solvePoisson(const ImageFloat& input_image, std::map<int, float>  scr
             for (int y = 0;y < Y; ++y)
             {
                 if (lookup[x][y]) {
-                    // I_next.data[getImageOffset(I_next, x, y)] = scribbles[getImageOffset(input_image, x, y)] ; // / 255.0f;
                     continue;
                 }
 
@@ -201,49 +199,21 @@ ImageFloat solveAnisotropic(const ImageFloat& input_image, const ImageFloat& gre
                 {
                     prv_x = I.data[getImageOffset(I, x - 1, y)];
                     w_prv_x = pixel_coeff(x, y, x - 1, y, greyscale, beta);
-                    // if ((lookup[x-1][y]) and (abs(prv_x - I.data[getImageOffset(I, x, y)]) < TOLERANCE)) {
-                    //     I.data[getImageOffset(I, x, y)] = prv_x;
-                    //     I_next.data[getImageOffset(I, x, y)] = prv_x;
-                    //     std::vector<int> tmp = {x, y};
-                    //     new_lookups.push_back(tmp);
-                    //     continue;
-                    // }
                 }
                 if (x < (X - 1))
                 {
                     nxt_x = I.data[getImageOffset(I, x + 1, y)];
                     w_nxt_x = pixel_coeff(x, y, x + 1, y, greyscale, beta);
-                    // if ((lookup[x+1][y]) and (abs(nxt_x - I.data[getImageOffset(I, x, y)]) < TOLERANCE)) {
-                    //     I.data[getImageOffset(I, x, y)] = nxt_x;
-                    //     I_next.data[getImageOffset(I, x, y)] = nxt_x;
-                    //     std::vector<int> tmp = {x, y};
-                    //     new_lookups.push_back(tmp);
-                    //     continue;
-                    // }
                 }
                 if (y > 0)
                 {
                     prv_y = I.data[getImageOffset(I, x, y - 1)];
                     w_prv_y = pixel_coeff(x, y, x, y - 1, greyscale, beta);
-                    // if ((lookup[x][y-1]) and (abs(prv_y - I.data[getImageOffset(I, x, y)]) < TOLERANCE)) {
-                    //     I.data[getImageOffset(I, x, y)] = prv_y;
-                    //     I_next.data[getImageOffset(I, x, y)] = prv_y;
-                    //     std::vector<int> tmp = {x, y};
-                    //     new_lookups.push_back(tmp);
-                    //     continue;
-                    // }
                 }
                 if (y < (Y - 1))
                 {
                     nxt_y = I.data[getImageOffset(I, x, y + 1)];
                     w_nxt_y = pixel_coeff(x, y, x, y + 1, greyscale, beta);
-                    // if ((lookup[x][y+1]) and ((abs(nxt_y - I.data[getImageOffset(I, x, y)])) < TOLERANCE)) {
-                    //     I.data[getImageOffset(I, x, y)] =   nxt_y;
-                    //     I_next.data[getImageOffset(I_next, x, y)] = nxt_y;
-                    //     std::vector<int> tmp = {x, y};
-                    //     new_lookups.push_back(tmp);
-                    //     continue;
-                    // }
                 }
 
                 I_next.data[getImageOffset(I_next, x, y)] = ((w_prv_x * prv_x + w_nxt_x * nxt_x + w_prv_y * prv_y + w_nxt_y * nxt_y)) / (w_prv_x + w_nxt_x + w_prv_y + w_nxt_y);
