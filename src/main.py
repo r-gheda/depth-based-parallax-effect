@@ -6,6 +6,7 @@ import os
 import subprocess
 import cv2
 import glob
+import csv
 
 SEL_IMAGE = None
 SUPPORTED_FORMATS = ["JPG", "JPEG", "PNG", "jpg", "jpeg", "png"]
@@ -32,6 +33,7 @@ focus_y = 0
 iterations = None
 beta = None
 aperture_size = None
+last_selected = None
 
 global scribbles_status_label
 
@@ -265,15 +267,71 @@ def apply_sam_mask(event):
     canvas.create_image(im.width/2, im.height/2, image=tk_img)
 
 def update_mask_depth_level(event):
-    global depth_level_entry, curr_sam_mask, depth_map_im
+    global depth_level_entry, curr_sam_mask, depth_map_im, toggle_state
     avg_depth = sum([depth_map_im.getpixel(k) for k in curr_sam_mask.keys()]) / len(curr_sam_mask)
     diff = int(depth_level_entry.get()) - avg_depth
-    for key in curr_sam_mask:
-        depth_map_im.putpixel(key, max(min(int(depth_map_im.getpixel(key) + (diff)), 255), 0))
+    if not toggle_state:
+        for key in curr_sam_mask:
+            depth_map_im.putpixel(key, max(min(int(depth_map_im.getpixel(key) + (diff)), 255), 0))
+    else:
+        for key in curr_sam_mask:
+            depth_map_im.putpixel(key, max(min(int(depth_level_entry.get()), 255),0))
     depth_map_im.save("outputs/" + str(sam_depth))
 
+def load_masks():
+    global img_name, masks
+    masks = {}
+    with open('outputs/sam-out/' + img_name + '/metadata.csv') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            if row[0] == 'id':
+                continue
+
+            image = Image.open('outputs/sam-out/' + img_name + '/' + row[0] + '.png')
+            for x in range(int(row[2]), int(row[4]) + int(row[2])):
+                for y in range(int(row[3]), int(row[5]) + int(row[3])):
+                    if image.getpixel((x, y)) != 0:
+                        if not (x,y) in masks:
+                            masks[(x,y)] = []
+                            masks[(x,y)].append(-1)
+                        masks[(x,y)].append(int(row[0]))
+
+def select_mask(event):
+    global last_selected, count, masks, curr_sam_mask, tk_img, im, canvas, sam_root, mask_dir, im_bak
+    if not (event.x, event.y) in masks:
+        return
+    if last_selected == None:
+        last_selected = (event.x, event.y)
+        count = 0
+    if len(masks[last_selected]) == len(masks[(event.x, event.y)]):
+        count = (count + 1) % len(masks[(event.x, event.y)])
+    else:
+        count = min(1, len(masks[(event.x, event.y)]) - 1)
+    last_selected = (event.x, event.y)
+    im = im_bak.copy()
+
+    curr_sam_mask = {}
+    if (masks[(event.x, event.y)][count] != -1):
+        mask = Image.open(mask_dir + str(masks[(event.x, event.y)][count]) + '.png')
+        for i in range(mask.width):
+            for j in range(mask.height):
+                if mask.getpixel((i,j)) != 0:
+                    curr_sam_mask[(i,j)] = im.getpixel((i,j))
+                    im.putpixel((i,j), (0,0,0))
+    tk_img = ImageTk.PhotoImage(image=im, master=sam_root)
+    canvas.create_image(im.width/2, im.height/2, image=tk_img)
+
+def toggle():
+    global toggle_btn, toggle_state
+    if toggle_btn.config('relief')[-1] == 'sunken':
+        toggle_btn.config(relief="raised")
+        toggle_state = False
+    else:
+        toggle_btn.config(relief="sunken")
+        toggle_state = True
+
 def run_sam():
-    global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im, mask_dir, img_name
+    global img_path, im, im_bak, tk_img, canvas, sam_root, depth_level_entry, depth_map_im, mask_dir, img_name, toggle_btn, toggle_state
 
     depth_map_im = Image.open("outputs/" + str(depth_map_to_be_used.get())).convert('L')
     if not os.path.exists("outputs/sam-out/" + img_name):      
@@ -283,6 +341,8 @@ def run_sam():
         print(stdout)
         print(stderr)
         proc.wait()
+
+    load_masks()
 
     im = Image.open(img_path)
     im_bak = im.copy()
@@ -299,17 +359,22 @@ def run_sam():
     depth_map_im.save("outputs/" + str(sam_depth))
     stream = os.popen('xdg-open outputs/' + str(sam_depth))
 
+    canvas.bind("<Button-1>", select_mask)
+
     Combo = ttk.Combobox(sam_root, values = files)
     Combo.set("Pick a SAM mask")
     Combo.grid(row=1, column=0)
 
-    depth_level_label = tk.Label(sam_root, text="Depth Level").grid(row=1, column=1)
+    depth_level_label = tk.Label(sam_root, text="Depth Level").grid(row=1, column=2)
     depth_level_entry = tk.Entry(sam_root)
     depth_level_entry.bind("<Return>", update_mask_depth_level)
-    depth_level_entry.grid(row=1, column=2)
+    depth_level_entry.grid(row=1, column=3)
 
     Combo.bind("<<ComboboxSelected>>", apply_sam_mask)
     
+    toggle_btn = tk.Button(sam_root, text="Flatten gradient", width=12, relief="raised", command=toggle)
+    toggle_btn.grid(row=1, column=1)
+    toggle_state = False
     sam_root.mainloop()
     
 def edit_image_pos(event):
