@@ -45,21 +45,26 @@ ImageWithMask forwardWarpImage(const ImageRGB& src_image, const ImageFloat& src_
     {
         for (int y = 0; y < src_image.height; ++y)
         {
+            // Compute the warped pixel location.
             int x_prime = (int) (x + disparity.data[getImageOffset(disparity, x, y)] * warp_factor + 0.5f);
             int y_prime = y;
 
+            // If the warped pixel is outside the image, skip it.
             if (x_prime < 0 || x_prime >= src_image.width || y_prime < 0 || y_prime >= src_image.height)
             {
                 continue;
             }
 
+            // Compute the depth of the warped pixel.
             float depth = src_depth.data[getImageOffset(src_depth, x, y)];
             float depth_prime = dst_depth.data[getImageOffset(src_depth, x_prime, y_prime)];
 
+            // If the warped pixel is closer than the current pixel, skip it.
             if (depth_prime <= depth)
             {
                 continue;
             }
+            // Otherwise, copy the pixel and depth over.
             dst_image.data[getImageOffset(dst_image, x_prime, y_prime)] = src_image.data[getImageOffset(src_image, x, y)];
             dst_depth.data[getImageOffset(dst_depth, x_prime, y_prime)] = depth;
             dst_mask.data[getImageOffset(dst_mask, x_prime, y_prime)] = 1.0f;
@@ -83,6 +88,7 @@ ImageRGB inpaintHoles(const ImageWithMask& img, const int size)
     {
         for (int y = 0; y < result.height; ++y)
         {
+            // If the pixel is not a hole, copy it over.
             if (img.mask.data[getImageOffset(img.mask, x, y)] >= 0.5f)
             {
                 result.data[getImageOffset(result, x, y)] = img.image.data[getImageOffset(img.image, x, y)];
@@ -92,23 +98,29 @@ ImageRGB inpaintHoles(const ImageWithMask& img, const int size)
             float res_g = 0;
             float res_b = 0;
             float weight_sum = 0;
+            // for each pixel in the window
             for (int s_x = -size / 2; s_x <= size / 2; s_x++)
             {
                 for (int s_y = -size / 2; s_y <= size / 2; s_y++)
                 {
+                    // compute absolute positions
                     int curr_x = x + s_x;
                     int curr_y = y + s_y;
+                    // if the pixel is outside the image or is not a hole, skip it
                     if (curr_x < 0 || curr_x >= result.width || curr_y < 0 || curr_y >= result.height || img.mask.data[getImageOffset(img.mask, curr_x, curr_y)] < 0.5f)
                     {
                         continue;
                     }
+                    // compute the weight of the pixel as a gaussian filter
                     float w_i = gauss(glm::distance(glm::vec2(x, y), glm::vec2(curr_x, curr_y)), sigma);
+                    // add the weighted pixel to the result
                     res_r += img.image.data[getImageOffset(img.image, curr_x, curr_y)].r * w_i;
                     res_g += img.image.data[getImageOffset(img.image, curr_x, curr_y)].g * w_i;
                     res_b += img.image.data[getImageOffset(img.image, curr_x, curr_y)].b * w_i;
                     weight_sum += w_i;
                 }
             }
+            // if the weight sum is greater than 0, normalize the result
             if (weight_sum > 0)
             {
                 result.data[getImageOffset(result, x, y)].r = res_r / weight_sum;
@@ -131,7 +143,8 @@ ImageFloat normalizedDepthToDisparity(
     for (int x = 0; x < depth.width; ++x)
     {
         for (int y = 0; y < depth.height; ++y)
-        {            
+        {
+            // Convert normalized depth to disparity in mm.            
             float z = (depth.data[getImageOffset(depth, x, y)]) * (far_plane_mm - near_plane_mm)  - (far_plane_mm - near_plane_mm) / 2;
             px_disparity.data[getImageOffset(px_disparity, x, y)] = (iod_mm / px_size_mm) * (z / (screen_distance_mm + z));
         }

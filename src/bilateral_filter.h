@@ -52,46 +52,54 @@ ImageRGB cross_bilateral_filter(const ImageRGB& input_rgb_image, const ImageFloa
 {
     auto output_image = ImageRGB(input_rgb_image.width, input_rgb_image.height);
 
+    // compute spatial kernel once (it will be the same for every pixel)
     auto spatial_kernel = getGaussianKernel(aperture_size);
 
     #pragma omp parallel for shared(output_image)
-    for (int x = 0; x < output_image.width; ++x)
+    for (int xy = 0; xy < output_image.width*output_image.height; ++xy)
     {
+        int x = xy % output_image.width;
+        int y = xy / output_image.width;  
+
+        // initialize normalization factor as the wieght of the pixel itself (1)
+        float normalization_factor = gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x, y)]);
+        // insert it in the output image
+        output_image.data[getImageOffset(output_image, x, y)] = normalization_factor * input_rgb_image.data[getImageOffset(input_rgb_image, x, y)];
+
         #pragma omp parallel for shared(output_image)
-        for (int y = 0; y < output_image.height; ++y)
+        for (int x_a = -aperture_size; x_a < aperture_size; ++x_a)
         {
-            float normalization_factor = gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x, y)]);
-            output_image.data[getImageOffset(output_image, x, y)] = normalization_factor * input_rgb_image.data[getImageOffset(input_rgb_image, x, y)];
-    
             #pragma omp parallel for shared(output_image)
-            for (int x_a = -aperture_size; x_a < aperture_size; ++x_a)
+            for (int y_a = -aperture_size; y_a < aperture_size; ++y_a)
             {
-                #pragma omp parallel for shared(output_image)
-                for (int y_a = -aperture_size; y_a < aperture_size; ++y_a)
+                int x_i = x + x_a;
+                int y_i = y + y_a;
+
+                // check if the pixel is out of bounds
+                if (x_i < 0 || x_i >= output_image.width || y_i < 0 || y_i >= output_image.height)
                 {
-                    int x_i = x + x_a;
-                    int y_i = y + y_a;
-
-                    if (x_i < 0 || x_i >= output_image.width || y_i < 0 || y_i >= output_image.height)
-                    {
-                        continue;
-                    }
-
-                    float spatial_weight = spatial_kernel[(x_a + aperture_size) * (2 * aperture_size + 1) + (y_a + aperture_size)];
-                    float depth_weight = pow(1-gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x_i, y_i)]), 2);
-                    float weight = spatial_weight * depth_weight;
-                    normalization_factor += weight;
-
-                    output_image.data[getImageOffset(output_image, x, y)].r += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].r;
-                    output_image.data[getImageOffset(output_image, x, y)].g += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].g;
-                    output_image.data[getImageOffset(output_image, x, y)].b += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].b;
+                    continue;
                 }
+                // get the spatial weight from the kernel
+                float spatial_weight = spatial_kernel[(x_a + aperture_size) * (2 * aperture_size + 1) + (y_a + aperture_size)];
+                // get the depth weight
+                float depth_weight = pow(1-gaussian_kernel(depth_map.data[getImageOffset(depth_map, focus_x, focus_y)], depth_map.data[getImageOffset(depth_map, x_i, y_i)]), 2);
+                // compute the weight and add it to the normalization factor
+                float weight = spatial_weight * depth_weight;
+                normalization_factor += weight;
 
+                // add the weighted pixel to the output image
+                output_image.data[getImageOffset(output_image, x, y)].r += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].r;
+                output_image.data[getImageOffset(output_image, x, y)].g += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].g;
+                output_image.data[getImageOffset(output_image, x, y)].b += weight * input_rgb_image.data[getImageOffset(input_rgb_image, x_i, y_i)].b;
             }
-            output_image.data[getImageOffset(output_image, x, y)].r /= normalization_factor;
-            output_image.data[getImageOffset(output_image, x, y)].g /= normalization_factor;
-            output_image.data[getImageOffset(output_image, x, y)].b /= normalization_factor;
+
         }
+        // normalize the output pixel
+        output_image.data[getImageOffset(output_image, x, y)].r /= normalization_factor;
+        output_image.data[getImageOffset(output_image, x, y)].g /= normalization_factor;
+        output_image.data[getImageOffset(output_image, x, y)].b /= normalization_factor;
+    
     }
 
     return output_image;
