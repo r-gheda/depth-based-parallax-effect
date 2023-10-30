@@ -5,7 +5,6 @@ from PIL import ImageTk, Image, ImageDraw
 import os
 import subprocess
 import cv2
-import glob
 import csv
 
 SEL_IMAGE = None
@@ -19,13 +18,14 @@ depth_annotation_window = None
 canvas = None
 out = None
 scribbles = {}
-computed_depth_map = "computed_depth_map.png"
+anisotropic_depth_map = "anisotropic_depth_map.png"
+poisson_depth_map = "poisson_depth_map.png"
 focused_image = "focused_image.png"
 predicted_depth_map = "predicted_depth.png"
 merged_depth_map = "merged_depth_map.png"
 sam_depth = "sam_depth.png"
 edited_depth_map = "edited_depth_map.png"
-computed_depth_map_loaded = False
+anisotropic_depth_map_loaded = False
 scribble_loaded = False
 predicted_depth_map_loaded = False
 focus_x = 0
@@ -131,38 +131,38 @@ def run_poisson():
 
     save_scribbles()
 
-    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/src_rgb.png", "outputs/" + str(computed_depth_map), "outputs/scribbles", "poisson", iterations, beta]
+    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/src_rgb.png", "outputs/" + str(poisson_depth_map), "outputs/scribbles", "poisson", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("outputs/" + str(computed_depth_map))
+    out = Image.open("outputs/" + str(poisson_depth_map))
     out.show()
-    out.save("outputs/" + str(computed_depth_map))
+    out.save("outputs/" + str(poisson_depth_map))
 
 def run_anisotropic():
-    global img, scribbles, computed_depth_map
+    global img, scribbles, anisotropic_depth_map
     if not os.path.exists("outputs"):
         os.makedirs("outputs")
-    if os.path.exists("outputs/" + str(computed_depth_map)):
-        os.remove("outputs/" + str(computed_depth_map))
+    if os.path.exists("outputs/" + str(anisotropic_depth_map)):
+        os.remove("outputs/" + str(anisotropic_depth_map))
     img.save("outputs/src_rgb.png")
     grey_img = img.convert('L')
     grey_img.save("outputs/greyscale-input.png")
 
     save_scribbles()
-    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/greyscale-input.png", "outputs/" + str(computed_depth_map), "outputs/scribbles", "anisotropic", iterations, beta]
+    arglist = ["build/poisson", "outputs/greyscale-input.png", "outputs/greyscale-input.png", "outputs/" + str(anisotropic_depth_map), "outputs/scribbles", "anisotropic", iterations, beta]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     print(stdout)
     print(stderr)
     proc.wait()
-    out = Image.open("outputs/" + str(computed_depth_map))
-    out.save("outputs/" + str(computed_depth_map))
+    out = Image.open("outputs/" + str(anisotropic_depth_map))
+    out.save("outputs/" + str(anisotropic_depth_map))
     out.show()
-    computed_depth_map_loaded = True
-    computed_text_var.set("Computed Depth Map: " + str(computed_depth_map_loaded))
+    anisotropic_depth_map_loaded = True
+    computed_text_var.set("Computed Depth Map: " + str(anisotropic_depth_map_loaded))
 
 def update_iter(event):
     global iterations
@@ -194,7 +194,7 @@ def select_focus():
     focus_selection_window.mainloop()
 
 def run_bilateral_filter():
-    global img, computed_depth_map, focus_x, focus_y, aperture_size, focused_image
+    global img, anisotropic_depth_map, focus_x, focus_y, aperture_size, focused_image
     arglist = ["build/bilateral_filter", "outputs/src_rgb.png", "outputs/" +  str(depth_map_to_be_used.get()), "outputs/" + str(focused_image), str(focus_x), str(focus_y), aperture_size]
     proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
@@ -205,7 +205,7 @@ def run_bilateral_filter():
     out.show()
     
 
-def run_cnn():
+def run_cnn(called = False):
     global predicted_depth_map
     predicted_depth_map = "predicted_depth.png"
     arglist = ["python3", "src/dist_depth/run_rgb_cnn.py", img_path]
@@ -215,7 +215,8 @@ def run_cnn():
     print(stderr)
     proc.wait()
     out = Image.open("outputs/predicted_depth.png")
-    out.show()
+    if not called:
+        out.show()
     predicted_depth_map_loaded = True
     predicted_text_var.set("Predicted Depth Map: " + str(predicted_depth_map_loaded))
 
@@ -228,11 +229,12 @@ def merge_depth_maps():
     merged_depth_maps.show()
 
 def run_merged_depth_maps():
-    global img, scribbles, computed_depth_map, predicted_depth_map
+    global img, scribbles, anisotropic_depth_map, predicted_depth_map
     if not os.path.exists("outputs"):
         os.makedirs("outputs")
-    if os.path.exists("outputs/" + str(computed_depth_map)):
-        os.remove("outputs/" + str(computed_depth_map))
+    if not os.path.exists("outputs/" + str(predicted_depth_map)):
+        run_cnn(True)
+
     img.save("outputs/src_rgb.png")
     grey_img = img.convert('L')
     grey_img.save("outputs/greyscale-input.png")
@@ -606,8 +608,8 @@ edit_merged_depth_map_button = tk.Button(
     text="Manual Edit Depth Map",
     width=25,
     height=5,
-    bg="red",
-    fg="yellow",
+    bg="orange",
+    fg="black",
     command= edit_merged_depth_map
 ).grid(row=7, column=0, columnspan=2)
 
@@ -615,15 +617,15 @@ run_sam_button = tk.Button(
     text="Run SAM",
     width=25,
     height=5,
-    bg="red",
-    fg="yellow",
+    bg="orange",
+    fg="black",
     command= run_sam
 ).grid(row=7, column=2, columnspan=2)
 
-aperture_size_label = tk.Label(text="Aperture Size").grid(row=9, column=0)
+aperture_size_label = tk.Label(text="Aperture Size").grid(row=10, column=0)
 aperture_size = tk.Entry()
 aperture_size.bind("<Return>", update_aperture_size)
-aperture_size.grid(row=9, column=1)
+aperture_size.grid(row=10, column=1)
 
 select_focus = tk.Button(
     text="Select Focus",
@@ -632,7 +634,7 @@ select_focus = tk.Button(
     bg="blue",
     fg="yellow",
     command= select_focus
-).grid(row=10, column=0, columnspan=2)
+).grid(row=11, column=0, columnspan=2)
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
@@ -641,7 +643,7 @@ run_bilateral_filter_button = tk.Button(
     bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
-).grid(row=10, column=2, columnspan=2)
+).grid(row=11, column=2, columnspan=2)
 
 run_parallax_button = tk.Button(
     text="Parallax",
@@ -650,7 +652,7 @@ run_parallax_button = tk.Button(
     bg="purple",
     fg="yellow",
     command= run_parallax
-).grid(row=11, column=0, columnspan=4)
+).grid(row=12, column=0, columnspan=4)
 
 file_text_var = tk.StringVar(window, value="File Opened: " + str(SEL_IMAGE))
 file_open_label = tk.Label(textvar=file_text_var).grid(row=0, column=5, columnspan=2)
@@ -658,8 +660,8 @@ file_open_label = tk.Label(textvar=file_text_var).grid(row=0, column=5, columnsp
 scribble_text_var = tk.StringVar(window, value="Scribbles loaded: " + str(scribble_loaded))
 scribbles_status_label = tk.Label(textvariable=scribble_text_var).grid(row=1, column=5, columnspan=2)
 
-computed_text_var = tk.StringVar(window, value="Computed Depth Map: " + str(computed_depth_map_loaded))
-computed_depth_map_status_label = tk.Label(textvar=computed_text_var).grid(row=5, column=5, columnspan=2)
+computed_text_var = tk.StringVar(window, value="Computed Depth Map: " + str(anisotropic_depth_map_loaded))
+anisotropic_depth_map_status_label = tk.Label(textvar=computed_text_var).grid(row=5, column=5, columnspan=2)
 
 predicted_text_var = tk.StringVar(window, value="Predicted Depth Map: " + str(predicted_depth_map_loaded))
 predicted_depth_map_status_label = tk.Label(textvar=predicted_text_var).grid(row=6, column=5, columnspan=2)
@@ -671,32 +673,36 @@ beta_text_var = tk.StringVar(window, value="Beta: " + str(beta))
 beta_label = tk.Label(textvar=beta_text_var).grid(row=4, column=5, columnspan=2)
 
 focus_text_var = tk.StringVar(window, value="Focus: (" + str(focus_x) + ", " + str(focus_y) + ")")
-selected_focus_label = tk.Label(textvar=focus_text_var).grid(row=10, column=5, columnspan=2)
+selected_focus_label = tk.Label(textvar=focus_text_var).grid(row=11, column=5, columnspan=2)
 
 aperture_size_text_var = tk.StringVar(window, value="Aperture Size: " + str(aperture_size))
-selected_aperture_size_label = tk.Label(textvar=aperture_size_text_var).grid(row=9, column=5, columnspan=2)
+selected_aperture_size_label = tk.Label(textvar=aperture_size_text_var).grid(row=10, column=5, columnspan=2)
 
-depth_map_to_be_used = tk.StringVar(window, value=computed_depth_map)
+depth_map_to_be_used = tk.StringVar(window, value=anisotropic_depth_map)
 
-R1 = tk.Radiobutton(window, text="Computed Depth Map", variable=depth_map_to_be_used, value=computed_depth_map
+R0 = tk.Radiobutton(window, text="Poisson Depth Map", variable=depth_map_to_be_used, value=poisson_depth_map
+                    )
+R0.grid(row=8, column=0, columnspan=1)
+
+R1 = tk.Radiobutton(window, text="Anisotropic Depth Map", variable=depth_map_to_be_used, value=anisotropic_depth_map
                   )
-R1.grid(row=8, column=0, columnspan=1)
+R1.grid(row=8, column=1, columnspan=1)
 
 R2 = tk.Radiobutton(window, text="CNN Predicted Depth Map", variable=depth_map_to_be_used, value=predicted_depth_map,
                   )
-R2.grid(row=8, column=1, columnspan=1)
+R2.grid(row=8, column=2, columnspan=1)
 
 R3 = tk.Radiobutton(window, text="Merged Depth Map", variable=depth_map_to_be_used, value=merged_depth_map,
                   )
-R3.grid(row=8, column=2, columnspan=1)
+R3.grid(row=9, column=0, columnspan=1)
 
 R4 = tk.Radiobutton(window, text="SAM Depth Map", variable=depth_map_to_be_used, value=sam_depth,
                     )
-R4.grid(row=8, column=3, columnspan=1)
+R4.grid(row=9, column=1, columnspan=1)
 
 R5 = tk.Radiobutton(window, text="Edited Depth Map", variable=depth_map_to_be_used, value=edited_depth_map,
                     )
-R5.grid(row=8, column=4, columnspan=1)
+R5.grid(row=9, column=2, columnspan=1)
 
 
 window.mainloop()
