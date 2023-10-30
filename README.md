@@ -5,9 +5,13 @@ Build the C++ executables
 ```
 mkdir -p build && cd build/ && cmake .. && make && cd ..
 ```
-Then install and activate the conda environment 
+Then create and activate a python environment 
 ```
-conda env create -f environment.yml && conda activate aip-project
+python3 -m venv env && source env/bin/activate
+```
+Install python requirements
+```
+python3 -m pip install -r requirements.txt
 ```
 Download DistDepth CNN  [[3]](#3) and SAM models [[4]](#4)
 ```
