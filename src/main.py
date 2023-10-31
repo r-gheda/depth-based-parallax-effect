@@ -138,7 +138,7 @@ def run_poisson():
     print(stderr)
     proc.wait()
     out = Image.open("outputs/" + str(poisson_depth_map))
-    out.show()
+    out.show(title="Poisson Depth Map")
     out.save("outputs/" + str(poisson_depth_map))
 
 def run_anisotropic():
@@ -160,7 +160,7 @@ def run_anisotropic():
     proc.wait()
     out = Image.open("outputs/" + str(anisotropic_depth_map))
     out.save("outputs/" + str(anisotropic_depth_map))
-    out.show()
+    out.show(title="Anisotropic Depth Map")
     anisotropic_depth_map_loaded = True
     computed_text_var.set("Computed Depth Map: " + str(anisotropic_depth_map_loaded))
 
@@ -202,7 +202,7 @@ def run_bilateral_filter():
     print(stderr)
     proc.wait()
     out = Image.open("outputs/" + str(focused_image))
-    out.show()
+    out.show(title="Bilateral Filter")
     
 
 def run_cnn(called = False):
@@ -216,7 +216,7 @@ def run_cnn(called = False):
     proc.wait()
     out = Image.open("outputs/predicted_depth.png")
     if not called:
-        out.show()
+        out.show("CNN Predicted Depth Map")
     predicted_depth_map_loaded = True
     predicted_text_var.set("Predicted Depth Map: " + str(predicted_depth_map_loaded))
 
@@ -252,7 +252,7 @@ def run_merged_depth_maps():
     tmp = out.convert('L')
     # out = Image.blend(tmp, p, 0.5)
     out.save("outputs/" + str(merged_depth_map))
-    out.show()
+    out.show(title="Merged Depth Map")
 
 
 def apply_sam_mask(event):
@@ -703,6 +703,6 @@ R4.grid(row=9, column=1, columnspan=1)
 R5 = tk.Radiobutton(window, text="Edited Depth Map", variable=depth_map_to_be_used, value=edited_depth_map,
                     )
 R5.grid(row=9, column=2, columnspan=1)
-
+window.resizable(height = None, width = None)
 
 window.mainloop()
