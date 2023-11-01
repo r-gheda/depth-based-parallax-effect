@@ -1,11 +1,16 @@
 # Student Workspace for CS4365 Applied Image Processing
 ### Roberto Gheda - 5863503
 ## Prerequisites
-This app has been developed and tested on Ubuntu 22.04 using Python 3.10.13, cmake 3.22.1 and C++.
+This app has been developed and tested on Ubuntu 22.04 using Python 3.10.13, cmake 3.22.1 and C++. \
 Moreover, the `xdg-open` command is used for image displaying during SAM-based image editing (see below for details). Please install `xdg-utils`.
 ```
 sudo apt-get install xdg-utils
 ```
+## External code
+Code in folders [src/dist_depth](src/dist_depth/) and [src/segment-anything](src/segment-anything/) come from the respective GitHub repositories and contain the core code for running the deep learning models. \
+The [framework](framework) directory contains the image processing framework used in the assignments. \
+Everything else is made by me.
+
 ## Build and run
 Build the C++ executables:
 ```
@@ -34,17 +39,17 @@ An image of the program GUI is provided as a reference for instructions on how t
 ![](readme-imgs/gui.png)
 ### Basic Features
 ### 1. Load an RGB image from disk
-An image can be opened using the "Open A File" button above. The name of the opened file will be shown aside. A set of sample images are provided in the [data directory](data/).
+An image can be opened using the "Open A File" blue button. A set of sample images are provided in the [data directory](data/).
 Implemented in [src/main.py at line 40](src/main.py#L40).
 ### 2. Allow users to scribble depth annotations in UI
 It is possible to draw scribbles using the "Draw Scribbles" button. In order to save them it is sufficient to close the drawing window. Please note that drawing scribbles is not mandatory for using the subsuquent functionalities.
 Implemented in [src/main.py at line 105](src/main.py#L105).
 ### 3. Diffuse annotations across the image using Poisson image editing
-First it is possible to choose a number of iterations by writing it in its bar and pressing enter. Then it is possible ot run either the standard Poisson image editing [[1]](#1) or an enhanced anisotropic version inspired by the relative paper [[2]](#2).<br>
-Please note that in order to run the anisotropic version choosing a proper value of beta (strength of anisotropic effect) is needed. A suggested value is 20. A sufficient number of iterations might be between 1000 and 5000 depending on image size and amount of scribbles.
+First it is possible to choose a number of iterations by writing it in its bar and **pressing enter**. Then it is possible ot run either the standard Poisson image editing [[1]](#1) or an enhanced anisotropic version inspired by the relative paper [[2]](#2).<br>
+Please note that in order to run the anisotropic version choosing a proper value of beta (strength of anisotropic effect) is needed. A suggested beta value is 20. A sufficient number of iterations might be between 1000 and 5000 depending on image size and amount of scribbles.
 Implemented in [src/poisson.h at line 47](src/poisson.h#L47) and [line 130](src/poisson.h#L130).
 ### 4. Allow users to select focus depth and aperture size
-Aperture size can be set using its bar and pressing enter. A focus point can be chosen the "Select Focus" button and closing the window once the focus point has been chosen.
+Aperture size can be set using its bar and **pressing enter**. A focus point can be chosen the "Select Focus" button and closing the window once the focus point has been chosen.
 ### 5. Simulate depth-of-field using a spatially varying cross-bilateral filter
 A Cross-Bilateral Filter can be run using the light blue "Bilateral Filter". In order to do so it is needed to choose which depth map to use via the above radio button.
 Implemented in [src/bilateral_filter.h at line 51](src/bilateral_filter.h#L51).
