@@ -3,9 +3,10 @@
 **GitLab repository:** [https://gitlab.ewi.tudelft.nl/cgv/cs4365/student-repositories/2023-2024/cs436523rgheda.git](https://gitlab.ewi.tudelft.nl/cgv/cs4365/student-repositories/2023-2024/cs436523rgheda.git)
 ## Prerequisites
 This app has been developed and tested on **Ubuntu 22.04** using **Python 3.10.13**, **cmake 3.22.1** and **C++**. \
-Moreover, the `xdg-open` command is used for image displaying during SAM-based image editing (see below for details). For a proper user experience, please install `xdg-utils`.
+Moreover, the `xdg-open` command is used for image displaying during SAM-based image editing (see below for details). For a proper user experience, please install `xdg-utils`. \
+More libraries to be installed for downloading NN models include `wget` and `curl`.
 ```
-sudo apt-get install xdg-utils
+sudo apt-get install xdg-utils curl wget
 ```
 ## External code
 Code in directories [src/dist_depth](src/dist_depth/) and [src/segment-anything](src/segment-anything/) come from the respective GitHub repositories and contain the core code for running the respective deep learning models. \
