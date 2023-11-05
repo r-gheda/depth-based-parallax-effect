@@ -610,8 +610,8 @@ window = tk.Tk()
 #Create a button that lets to select an image file
 image_button = tk.Button(
     text="Open A File",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="blue",
     fg="yellow",
     command= select_image
@@ -619,8 +619,8 @@ image_button = tk.Button(
 
 draw_button = tk.Button(
     text="Draw Scribbles",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="green",
     fg="yellow",
     command= draw_annotations_callback
@@ -628,8 +628,8 @@ draw_button = tk.Button(
 
 discard_button = tk.Button(
     text="Discard Scribbles",
-    width="25",
-    height="5",
+    width="15",
+    height="2",
     bg="green",
     fg="yellow",
     command=discard_scribbles_handler
@@ -637,8 +637,8 @@ discard_button = tk.Button(
 
 save_scibbles_button = tk.Button(
     text="Save Scribbles",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="green",
     fg="yellow",
     command= save_scribbles_from_file
@@ -646,8 +646,8 @@ save_scibbles_button = tk.Button(
 
 load_scribbles_button = tk.Button(
     text="Load Scribbles",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="green",
     fg="yellow",
     command= load_scribble_from_file
@@ -665,8 +665,8 @@ beta_entry.grid(row=4, column=3, columnspan=2)
 
 poisson_button = tk.Button(
     text="Poisson",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="red",
     fg="yellow",
     command= run_poisson
@@ -674,8 +674,8 @@ poisson_button = tk.Button(
 
 anisotropic_button = tk.Button(
     text="Anisotropic",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="red",
     fg="yellow",
     command= run_anisotropic
@@ -683,8 +683,8 @@ anisotropic_button = tk.Button(
 
 run_cnn_button = tk.Button(
     text="Run CNN",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="red",
     fg="yellow",
     command= run_cnn
@@ -692,8 +692,8 @@ run_cnn_button = tk.Button(
 
 merge_depth_maps_button = tk.Button(
     text="Merge Depth Maps",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="red",
     fg="yellow",
     command= run_merged_depth_maps
@@ -701,8 +701,8 @@ merge_depth_maps_button = tk.Button(
 
 edit_merged_depth_map_button = tk.Button(
     text="Manual Edit Depth Map",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="orange",
     fg="black",
     command= edit_merged_depth_map
@@ -710,8 +710,8 @@ edit_merged_depth_map_button = tk.Button(
 
 run_sam_button = tk.Button(
     text="Run SAM",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="orange",
     fg="black",
     command= run_sam
@@ -724,8 +724,8 @@ aperture_size_entry.grid(row=10, column=3, columnspan=2)
 
 select_focus = tk.Button(
     text="Select Focus",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="blue",
     fg="yellow",
     command= select_focus
@@ -733,8 +733,8 @@ select_focus = tk.Button(
 
 run_bilateral_filter_button = tk.Button(
     text="Bilateral Filter",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="light blue",
     fg="yellow",
     command= run_bilateral_filter
@@ -742,8 +742,8 @@ run_bilateral_filter_button = tk.Button(
 
 run_parallax_button = tk.Button(
     text="Parallax",
-    width=25,
-    height=5,
+    width=15,
+    height=2,
     bg="purple",
     fg="yellow",
     command= run_parallax
