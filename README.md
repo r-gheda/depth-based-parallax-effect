@@ -1,6 +1,6 @@
 # Computational Depth Of Field
-### Roberto Gheda - 5863503
-**GitLab repository:** [https://gitlab.ewi.tudelft.nl/cgv/cs4365/student-repositories/2023-2024/cs436523rgheda.git](https://gitlab.ewi.tudelft.nl/cgv/cs4365/student-repositories/2023-2024/cs436523rgheda.git)
+This repository contains a program to create a Parallax effect video from a given image. It comes with several tools to generate and edit depth maps from such given image. \
+This projects exploits standard monoculuar depth estimation techniques such as Poisson Image editing as well as novel AI-based methodologies including a user-friendly depth map editing achieved leveraging Segment Anything Model[[4]](#4) (SAM) by Meta.
 ## Prerequisites
 This app has been developed and tested on **Ubuntu 22.04** using **Python 3.10.13**, **cmake 3.22.1** and **C++**. \
 Moreover, the `xdg-open` command is used for image displaying during SAM-based image editing (see below for details). For a proper user experience, please install `xdg-utils`. \
@@ -12,18 +12,6 @@ sudo apt-get install xdg-utils curl wget
 Code in directories [src/dist_depth](src/dist_depth/) and [src/segment-anything](src/segment-anything/) come from the respective GitHub repositories and contain the core code for running the respective deep learning models. \
 The [framework](framework) directory contains the image processing framework used in the assignments. \
 **Everything else is original code made by me.**
-
-## Repository content
-- `data`: contains some input examples.
-- `examples`: contains some output examples.
-- `framework`: contains external code imported from the assignments.
-- `src`: contains all of the source code.
-### Generated directories
-- `build`: contains C++ executables
-- `env`: contains Python3 virtual environment.
-- `models`: contains the Segment Anything model.
-- `outputs`: contains outputs from the program.
-    - `outputs/sam-out`: contains SAM cached masks. If masks for a specific input are stored there, the program will avoid computing everything from scratch.
 
 ## Build and run
 Build the C++ executables:
@@ -86,6 +74,18 @@ Image depth map can edited via GUI to correct users common mistakes. In order to
 ### 2. Allow user to run segmentation via SAM and edit the depth-map using it
 It is possible to run the Segment Anything Model [[4]](#4) and edit a depth map by selecting an object an setting a custom depth level. In order to do so, select a depth map using the dedicated radio button and press the "Run SAM" button. By default the object gradient will be kept. It can be removed by pressing the "Flatten Gradient" button and seleting a new depth level. This feature can help in achieving better results in the Parallax effect.\
 **Implemented in** [src/main.py at line 402](src/main.py#402)
+
+## Repository content
+- `data`: contains some input examples.
+- `examples`: contains some output examples.
+- `framework`: contains external code imported from the assignments.
+- `src`: contains all of the source code.
+### Generated directories
+- `build`: contains C++ executables
+- `env`: contains Python3 virtual environment.
+- `models`: contains the Segment Anything model.
+- `outputs`: contains outputs from the program.
+    - `outputs/sam-out`: contains SAM cached masks. If masks for a specific input are stored there, the program will avoid computing everything from scratch.
 
 ## References
 <a id="1">[1]</a> 
