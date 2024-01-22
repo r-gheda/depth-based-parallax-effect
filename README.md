@@ -1,6 +1,6 @@
 # Computational Depth Of Field
 This repository contains a program to create a Parallax effect video from a given image. It comes with several tools to generate and edit depth maps from such given image. \
-This projects exploits standard monoculuar depth estimation techniques such as Poisson Image editing as well as novel AI-based methodologies including a user-friendly depth map editing achieved leveraging Segment Anything Model[[4]](#4) (SAM) by Meta.
+This projects exploits standard monocular depth estimation techniques such as Poisson Image editing as well as novel AI-based methodologies including a user-friendly depth map editing achieved leveraging Segment Anything Model[[4]](#4) (SAM) by Meta.
 ## Prerequisites
 This app has been developed and tested on **Ubuntu 22.04** using **Python 3.10.13**, **cmake 3.22.1** and **C++**. \
 Moreover, the `xdg-open` command is used for image displaying during SAM-based image editing (see below for details). For a proper user experience, please install `xdg-utils`. \
